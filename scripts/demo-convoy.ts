@@ -118,8 +118,14 @@ const skipped = parsed.filter((l: any) => l.name === 'QuerySkipped');
 
 console.log(`\ndelivered in ${receipt.hash} | gas ${receipt.gasUsed}`);
 console.log(`  ${delivered} facts handed to subscribing apps`);
+const REASON: Record<number, string> = {
+  1: 'already delivered',
+  2: 'source transaction failed',
+  3: 'unsupported transaction type',
+};
 for (const ev of skipped) {
-  console.log(`  refused ${ev.args.queryId.slice(0, 10)} reason ${ev.args.reason} (2 = source transaction failed)`);
+  const reason = Number(ev.args.reason);
+  console.log(`  refused ${ev.args.queryId.slice(0, 10)}: ${REASON[reason] ?? `unknown reason ${reason}`}`);
 }
 
 const cost = (h: number, proofs: number) => 2.3e-5 * proofs + 2.9e-7 * h;

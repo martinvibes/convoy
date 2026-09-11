@@ -39,6 +39,8 @@ contracts/sol/
 relayer/
   batcher.ts                  the batching policy, pure and testable
   index.ts                    watch, group, prove, deliver
+  attestation.ts              a wait that survives the public RPC
+ui/                           the dispatch board: Vite, React, Tailwind, no backend
 bench/bench.ts                the claim, measured on CC3 testnet
 docs/ATTESTCOIN.md            how the protocol is used, and what is deliberately not used
 ```
@@ -58,6 +60,36 @@ They exist to prove one thing: the batch fills with traffic from applications th
 Each one is around forty lines. No precompile call, no proof handling, no status check, no worker.
 That is the product.
 
+## Live on Creditcoin CC3 testnet
+
+| contract | address |
+|---|---|
+| ConvoyRouter | `0x31ce792A617FF45DFD22d43D6f4034D0410c3FfD` |
+| SubscriptionRegistry | `0x152Acc890963b73458903968eA8AEFB699E902cC` |
+| RelayerBond | `0x263F4353e937de024e5BaA1E38d44718DAa3738f` |
+| PassportSubscriber | `0x70c255C4bb0718c2CF9BEC0CBadc1835436B4D3c` |
+| EscrowSubscriber | `0xEF47E07Af127C3258957e8771487c70B9cf68cD2` |
+| CouncilSubscriber | `0xbC67c0823Df05e64EF29b1EA9F24D56eb158d444` |
+| ConvoyEmitter (Sepolia) | `0x493eC14D06ce94C6F230A5dB7b3f3981949daB6C` |
+
+The first real convoy carried nine transactions for three unrelated dApps under one continuity
+proof of 15 hashes. Proven separately they would have needed nine proofs and 135 hashes.
+
+```
+convoys delivered     1
+transactions proven   9
+continuity hashes     15
+facts handed to apps  9
+
+modelled cost  alone 0.00024615 CTC  vs convoy 0.00002735 CTC  (9.0x)
+```
+
+Separately, a genuinely reverted Sepolia transaction was proven and delivered to the router. The
+precompile verified it happily, because it really is in that block. Convoy refused it with
+`QuerySkipped` reason 2, on chain, in `0x9323ff96…e1cbd`.
+
+`npm run status` prints all of that live from the chain.
+
 ## Running it
 
 ```bash
@@ -66,7 +98,16 @@ forge install foundry-rs/forge-std --no-git
 npm test                         # 11 contract tests + 9 batching-policy tests
 npm run check                    # preflight against live CC3 testnet, no keys needed
 npx tsx relayer/index.ts --dry-run   # batching policy, no chain, no keys, no funds
+npm run ui                       # the dispatch board, reads the chain from your browser
 ```
+
+### The dashboard
+
+`npm run ui` serves a live board at `http://localhost:5178`. It reads Creditcoin directly from the
+browser, with no backend and no indexer: the Creditcoin RPC sends `access-control-allow-origin: *`,
+and the contract addresses come from the same `deployments.json` the deploy script writes. The hero
+is the manifest of the last convoy, the shared escort on the left and the cargo it covered on the
+right, followed by what those transactions would have cost travelling alone.
 
 `npm run check` talks to the real ChainInfo precompile and prints what is currently attested:
 
@@ -92,14 +133,32 @@ shared rail: ten events from unrelated dApps land in the same window
 ### Live on testnet
 
 ```bash
-cp .env.example .env             # fill in RPCs and three keys
-npm run deploy:sepolia           # ConvoyEmitter on Sepolia
-npm run deploy:creditcoin        # full stack on CC3 testnet, three dApps subscribed
-npx tsx scripts/bond.ts          # relayer posts its bond
-npm run emit -- 9                # source traffic, including one deliberate revert
-npm run relayer                  # watch, group, prove, deliver
-npm run bench -- 5               # measure convoy vs one-at-a-time, same work both ways
+cp .env.example .env                 # fill in RPCs and three keys
+npm run deploy:sepolia               # ConvoyEmitter on Sepolia
+npm run deploy:creditcoin            # full stack on CC3 testnet, three dApps subscribed
+npx tsx scripts/fund-relayer.ts 150  # the relayer is a separate key on purpose
+npx tsx scripts/bond.ts              # relayer posts its bond
+npm run demo -- 9                    # the whole argument in one command
+npm run status                       # what actually happened, read back from the chain
 ```
+
+`npm run demo` emits nine events for three unrelated dApps plus one transaction that reverts, waits
+for the attestor network, and delivers all ten as a single convoy. Nine facts are handed to
+subscribers; the reverted one is refused. Add `--resume` to redeliver the same source transactions
+without paying to emit them again.
+
+The relayer is the same thing without the staging:
+
+```bash
+npm run emit -- 9                    # source traffic
+npm run relayer                      # watch, group, prove, deliver
+npm run relayer -- --from <block>    # replay a range after a restart
+npm run bench -- 5                   # convoy vs one-at-a-time, same work both ways
+```
+
+Note that `npm run relayer` cannot deliver the reverted transaction: a revert emits no logs, so
+`eth_getLogs` never sees it. `scripts/prove-failure.ts <txhash>` delivers one by hash, which is how
+the receipt-status gate gets exercised against a real failure.
 
 ## Design notes worth arguing about
 
@@ -121,7 +180,14 @@ arrive. A dApp that reverts on purpose should not get free delivery.
 The bond prices the two things a proof cannot rule out: censoring a paying subscriber, and spamming
 the router with batches that deliver nothing.
 
+**The public testnet RPC shapes the code more than it should.** Three things were not optional.
+`eth_getLogs` must be bounded, so every scan starts at `DEPLOY_BLOCK`. The SDK's
+`waitUntilHeightAttested` defaults to a 60 second timeout against a measured attestation lag of
+about 6.4 minutes, and gives up after five failed polls, so `relayer/attestation.ts` replaces it.
+And a relayer that starts at chain head silently drops whatever was emitted while it was down.
+
 ## Status
 
-Contracts, relayer, benchmark and tests are complete and green. Live testnet addresses land in
-`deployments.json` once the deploy scripts run.
+Deployed and running on CC3 testnet. Contracts, relayer, dashboard, benchmark and tests are
+complete and green. Writability is not used: the Attestcoin docs state it is still undergoing
+third-party testing and audits, so Convoy is read-only by design.

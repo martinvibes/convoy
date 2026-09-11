@@ -8,3 +8,6 @@ lib/
 bench/results/*.json
 broadcast/
 demo-convoy.json
+
+ui/node_modules
+ui/dist
