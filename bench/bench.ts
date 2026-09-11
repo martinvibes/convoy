@@ -20,6 +20,7 @@ import { Contract, JsonRpcProvider, parseEther, id as keccak } from 'ethers';
 import { chainInfo, proofProvider } from '@gluwa/usc-sdk';
 import { artifact, signer, need, root, CREDITCOIN_RPC } from '../scripts/lib.js';
 import { modelledCostCtc } from '../relayer/batcher.js';
+import { waitForAttestation } from '../relayer/attestation.js';
 
 const n = Number(process.argv[2] ?? '5');
 const CHAIN_KEY = Number(process.env.SOURCE_CHAIN_KEY ?? '1');
@@ -34,7 +35,9 @@ const emitter = new Contract(need('SOURCE_EMITTER_ADDRESS'), artifact('ConvoyEmi
 const router = new Contract(need('CONVOY_ROUTER_ADDRESS'), artifact('ConvoyRouter').abi, relayerWallet);
 
 const builder = new proofProvider.service.ProofBuilder(CHAIN_KEY, PROOF_URL);
-const chainInfoProvider = new chainInfo.PrecompileChainInfoProvider(new JsonRpcProvider(CREDITCOIN_RPC));
+const chainInfoProvider = new chainInfo.PrecompileChainInfoProvider(
+  new JsonRpcProvider(CREDITCOIN_RPC, undefined, { staticNetwork: true }),
+);
 
 interface Emitted {
   txHash: string;
@@ -59,7 +62,7 @@ async function main(): Promise<void> {
 
   const highest = Math.max(...[...setA, ...setB].map((e) => e.blockNumber));
   console.log(`\nwaiting for Sepolia block ${highest} to be attested on Creditcoin`);
-  await chainInfoProvider.waitUntilHeightAttested(CHAIN_KEY, highest);
+  await waitForAttestation(chainInfoProvider, CHAIN_KEY, highest);
 
   // --- path A: one continuity proof per transaction, the ASCBase default ---
   console.log('\npath A: delivering one at a time');
