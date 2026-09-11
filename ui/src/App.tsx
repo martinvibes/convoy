@@ -167,10 +167,7 @@ function Header({
 
       {/* The road. The painted lane fills as the next read approaches, so the wait is visible. */}
       <div className="relative h-2 w-full border-y-[3px] border-ink bg-ink/40" aria-hidden="true">
-        <div
-          className="lane h-full transition-[width] duration-1000 ease-linear"
-          style={{ width: `${progress}%` }}
-        />
+        <div className="lane h-full" style={{ width: `${progress}%` }} />
       </div>
 
       {stale && (

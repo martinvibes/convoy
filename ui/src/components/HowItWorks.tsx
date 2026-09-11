@@ -30,7 +30,7 @@ export function HowItWorks() {
         <li key={s.n} className="block-card flex gap-3 p-4">
           <span className="font-display text-3xl leading-none tabular-nums opacity-25">{s.n}</span>
           <div>
-            <h3 className="mb-1 text-base font-bold normal-case tracking-normal">{s.title}</h3>
+            <h3 className="mb-1 font-sans text-base font-bold normal-case tracking-normal">{s.title}</h3>
             <p className="text-sm leading-snug">{s.body}</p>
           </div>
         </li>
