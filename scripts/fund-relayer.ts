@@ -10,7 +10,7 @@ import { parseEther, formatEther } from 'ethers';
 import { signer, CREDITCOIN_RPC } from './lib.js';
 import { Wallet } from 'ethers';
 
-const amount = parseEther(process.argv[2] ?? '0.05');
+const amount = parseEther(process.argv[2] ?? process.env.RELAYER_FUND_CTC ?? '0.05');
 
 const deployer = signer(CREDITCOIN_RPC, 'CREDITCOIN_PRIVATE_KEY');
 const relayerKey = process.env.RELAYER_PRIVATE_KEY;

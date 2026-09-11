@@ -29,6 +29,10 @@ console.log(
     `prepay ${formatEther(PREPAY)} CTC x3 subscriptions\n`,
 );
 
+// Recorded so every later log scan has a floor. Creditcoin's public RPC rejects an unbounded
+// eth_getLogs with "query timeout of 10 seconds exceeded".
+const deployBlock = await wallet.provider!.getBlockNumber();
+
 const bond = await deploy('RelayerBond', wallet, [wallet.address, MIN_BOND]);
 const registry = await deploy('SubscriptionRegistry', wallet, [wallet.address]);
 const router = await deploy('ConvoyRouter', wallet, [
@@ -58,6 +62,7 @@ for (const [name, callback, topic] of [
 }
 
 writeDeployments({
+  DEPLOY_BLOCK: String(deployBlock),
   RELAYER_BOND_ADDRESS: await bond.getAddress(),
   SUBSCRIPTION_REGISTRY_ADDRESS: await registry.getAddress(),
   CONVOY_ROUTER_ADDRESS: routerAddress,

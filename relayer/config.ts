@@ -6,9 +6,24 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
 
+// Deploy scripts write contract addresses here under the same names the env vars use, so the
+// relayer picks up a fresh deployment with no hand-copying. An explicit env var still wins, which
+// is how you point the relayer at a different deployment than the one you last deployed.
+function deployed(): Record<string, string> {
+  try {
+    return JSON.parse(readFileSync(resolve(root, 'deployments.json'), 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
 function required(name: string): string {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing required env var ${name}. Copy .env.example to .env and fill it in.`);
+  const v = process.env[name] ?? deployed()[name];
+  if (!v) {
+    throw new Error(
+      `Missing ${name}. Either set it in .env, or run the deploy script that writes deployments.json.`,
+    );
+  }
   return v;
 }
 
@@ -26,6 +41,10 @@ export const config = {
   sourceChainKey: Number(optional('SOURCE_CHAIN_KEY', '1')),
 
   relayerKey: () => required('RELAYER_PRIVATE_KEY'),
+
+  // Creditcoin's public RPC answers eth_getLogs with "query timeout of 10 seconds exceeded" if the
+  // range is unbounded, so every log scan starts at the block Convoy was deployed at.
+  deployBlock: Number(process.env.DEPLOY_BLOCK ?? deployed().DEPLOY_BLOCK ?? 0),
 
   routerAddress: () => required('CONVOY_ROUTER_ADDRESS'),
   registryAddress: () => required('SUBSCRIPTION_REGISTRY_ADDRESS'),

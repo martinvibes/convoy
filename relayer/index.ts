@@ -23,7 +23,7 @@ interface Route {
 const log = (...args: unknown[]) => console.log(new Date().toISOString(), ...args);
 
 async function discoverRoutes(registry: Contract): Promise<Route[]> {
-  const events = await registry.queryFilter(registry.filters.Subscribed(), 0, 'latest');
+  const events = await registry.queryFilter(registry.filters.Subscribed(), config.deployBlock, 'latest');
   const routes: Route[] = [];
   const seen = new Set<string>();
 
@@ -183,32 +183,57 @@ function dryRun(): void {
   console.log('');
 }
 
+async function retry<T>(fn: () => Promise<T>, what: string, attempts = 6): Promise<T> {
+  let lastError: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      const wait = Math.min(2 ** i, 30) * 1000;
+      log(`${what} failed (${(err as Error).message}), retrying in ${wait / 1000}s`);
+      await new Promise((r) => setTimeout(r, wait));
+    }
+  }
+  throw lastError;
+}
+
 async function main(): Promise<void> {
   if (process.argv.includes('--dry-run')) {
     dryRun();
     return;
   }
 
-  const source = new JsonRpcProvider(config.sourceRpc());
-  const creditcoin = new JsonRpcProvider(config.creditcoinRpc);
+  // staticNetwork skips ethers' chain-id detection round trip. Without it a single slow response at
+  // boot takes the whole relayer down before the retry loop below ever starts.
+  const source = new JsonRpcProvider(config.sourceRpc(), undefined, { staticNetwork: true });
+  const creditcoin = new JsonRpcProvider(config.creditcoinRpc, undefined, { staticNetwork: true });
   const wallet = new Wallet(config.relayerKey(), creditcoin);
 
   const registry = new Contract(config.registryAddress(), abiOf('SubscriptionRegistry'), creditcoin);
   const router = new Contract(config.routerAddress(), abiOf('ConvoyRouter'), wallet);
   const bond = new Contract(config.bondAddress(), abiOf('RelayerBond'), creditcoin);
 
-  if (!(await bond.isBonded(wallet.address))) {
+  // Public RPCs time out. Not being bonded is a real answer; failing to reach the node is not, so
+  // only the former is fatal.
+  const bonded = await retry(() => bond.isBonded(wallet.address), 'bond check');
+  if (!bonded) {
     throw new Error(`relayer ${wallet.address} is not bonded. Run scripts/bond.ts first.`);
   }
 
   const builder = new proofProvider.service.ProofBuilder(config.sourceChainKey, config.proofBuilderUrl);
   const chainInfoProvider = new chainInfo.PrecompileChainInfoProvider(creditcoin);
 
-  const routes = await discoverRoutes(registry);
+  const routes = await retry(() => discoverRoutes(registry), 'route discovery');
   log(`relaying as ${wallet.address} for ${routes.length} active subscriptions`);
   for (const r of routes) log(`  route ${r.emitter} / ${r.topic0.slice(0, 10)} -> ${r.callback}`);
 
-  let cursor = await source.getBlockNumber();
+  // A relayer that always starts at chain head silently drops anything emitted while it was down.
+  // --from <block> replays a known range, which is also how a restart catches up.
+  const fromArg = process.argv.indexOf('--from');
+  let cursor =
+    fromArg >= 0 ? Number(process.argv[fromArg + 1]) : await source.getBlockNumber();
+  log(`scanning source chain from block ${cursor}`);
   let pending: PendingItem[] = [];
   const policy = {
     maxBatchSize: config.maxBatchSize,
