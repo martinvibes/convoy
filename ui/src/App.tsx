@@ -1,6 +1,7 @@
-import { chain, commas } from './chain';
-import { useConvoy } from './useConvoy';
-import { Heading, Empty, Code } from './components/Chrome';
+import { useMemo, useState } from 'react';
+import { chain, commas, addressUrl, ago } from './chain';
+import { useConvoy, useNow, REFRESH_MS } from './useConvoy';
+import { Heading, Empty, Code, HashLink, Copy } from './components/Chrome';
 import { Manifest } from './components/Manifest';
 import { Savings } from './components/Savings';
 import { Totals } from './components/Totals';
@@ -8,12 +9,25 @@ import { DispatchLog } from './components/DispatchLog';
 import { Subscribers } from './components/Subscribers';
 
 export function App() {
-  const state = useConvoy();
+  const { state, refresh, refreshing, nextRefreshAt } = useConvoy();
+  const [selected, setSelected] = useState<string | null>(null);
+
+  const board = state.status === 'ready' ? state.board : null;
+  const latest = board?.convoys[board.convoys.length - 1];
+  const shown = useMemo(
+    () => board?.convoys.find((c) => c.txHash === selected) ?? latest,
+    [board, selected, latest],
+  );
 
   return (
     <div className="min-h-screen overflow-x-hidden p-2 sm:p-4">
       <div className="mx-auto w-full max-w-6xl">
-        <Header state={state} />
+        <Header
+          state={state}
+          refresh={refresh}
+          refreshing={refreshing}
+          nextRefreshAt={nextRefreshAt}
+        />
 
         {state.status === 'undeployed' && (
           <Empty title="Convoy is not on chain yet">
@@ -28,62 +42,95 @@ export function App() {
 
         {state.status === 'error' && (
           <Empty title="Could not reach Creditcoin">
-            The public RPC did not answer: {state.message}. The board keeps retrying every ten
-            seconds.
+            The public RPC did not answer: {state.message}. The board keeps retrying.
           </Empty>
         )}
 
-        {state.status === 'ready' && (
+        {board && (
           <div className="space-y-8">
             <section>
-              <Heading note="the transactions that travelled together under one proof">
-                Latest manifest
+              <Heading
+                note={
+                  shown && shown.txHash !== latest?.txHash
+                    ? 'showing an earlier convoy · pick another from the log below'
+                    : 'the transactions that travelled together under one proof'
+                }
+              >
+                {shown && shown.txHash !== latest?.txHash ? 'Manifest' : 'Latest manifest'}
               </Heading>
               <Manifest
-                convoy={state.board.convoys[state.board.convoys.length - 1]}
-                facts={state.board.facts}
-                skips={state.board.skips}
+                convoy={shown}
+                facts={board.facts}
+                skips={board.skips}
+                isLatest={shown?.txHash === latest?.txHash}
               />
             </section>
 
-            {state.board.convoys.length > 0 && (
+            {board.convoys.length > 0 && (
               <section>
                 <Heading note="what these same transactions would have cost apart">
                   What sharing saved
                 </Heading>
-                <Savings convoys={state.board.convoys} />
+                <Savings convoys={board.convoys} />
               </section>
             )}
 
             <section>
               <Heading>Since deployment</Heading>
-              <Totals totals={state.board.totals} />
+              <Totals totals={board.totals} />
             </section>
 
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.4fr_1fr]">
               <section>
-                <Heading>Dispatch log</Heading>
-                <DispatchLog convoys={state.board.convoys} skips={state.board.skips} />
+                <Heading note="pick a convoy to see its manifest">Dispatch log</Heading>
+                <DispatchLog
+                  convoys={board.convoys}
+                  skips={board.skips}
+                  selected={shown?.txHash}
+                  onSelect={setSelected}
+                />
               </section>
               <section>
                 <Heading>Who is subscribed</Heading>
-                <Subscribers routes={state.board.routes} />
+                <Subscribers routes={board.routes} />
               </section>
             </div>
           </div>
         )}
 
-        <footer className="mt-10 pb-4 text-xs font-medium text-paper/50">
-          Reading Creditcoin CC3 testnet directly from this browser. No backend, no indexer.
+        <footer className="mt-10 flex flex-wrap items-center gap-x-4 gap-y-1 pb-4 text-xs font-medium text-paper/50">
+          <span>Reading Creditcoin CC3 testnet and Ethereum Sepolia directly from this browser.</span>
+          <span>No backend, no indexer.</span>
+          {chain.router && (
+            <span className="ml-auto flex items-center gap-2">
+              <HashLink href={addressUrl(chain.router)}>
+                <span className="text-paper/70">{chain.router}</span>
+              </HashLink>
+              <Copy value={chain.router} label="router address" />
+            </span>
+          )}
         </footer>
       </div>
     </div>
   );
 }
 
-function Header({ state }: { state: ReturnType<typeof useConvoy> }) {
+function Header({
+  state,
+  refresh,
+  refreshing,
+  nextRefreshAt,
+}: {
+  state: ReturnType<typeof useConvoy>['state'];
+  refresh: () => void;
+  refreshing: boolean;
+  nextRefreshAt: number;
+}) {
+  const now = useNow();
   const live = state.status === 'ready';
   const stale = state.status === 'ready' && state.stale;
+  const secondsLeft = Math.max(0, Math.ceil((nextRefreshAt - now) / 1000));
+  const progress = live ? Math.min(100, ((REFRESH_MS / 1000 - secondsLeft) / (REFRESH_MS / 1000)) * 100) : 0;
 
   return (
     <header className="mb-8 flex flex-wrap items-center gap-x-6 gap-y-3">
@@ -94,16 +141,6 @@ function Header({ state }: { state: ReturnType<typeof useConvoy> }) {
       </p>
 
       <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
-        {chain.router && (
-          <a
-            href={`${chain.explorer}/address/${chain.router}`}
-            target="_blank"
-            rel="noreferrer"
-            className="border-[3px] border-ink bg-paper px-3 py-1.5 font-mono text-xs font-bold shadow-hard-sm hover:bg-escort"
-          >
-            router {chain.router.slice(0, 6)}…{chain.router.slice(-4)}
-          </a>
-        )}
         <span
           className={`border-[3px] border-ink px-3 py-1.5 font-mono text-xs font-bold tabular-nums shadow-hard-sm ${
             stale ? 'bg-refused' : live ? 'bg-passport' : 'bg-paper'
@@ -111,13 +148,31 @@ function Header({ state }: { state: ReturnType<typeof useConvoy> }) {
         >
           {live ? `block ${commas(state.board.head)}` : 'connecting'}
         </span>
+
+        <button
+          type="button"
+          onClick={refresh}
+          disabled={refreshing}
+          className="border-[3px] border-ink bg-paper px-3 py-1.5 font-mono text-xs font-bold tabular-nums shadow-hard-sm transition-[box-shadow,transform] hover:-translate-x-px hover:-translate-y-px hover:bg-escort hover:shadow-hard disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {refreshing ? 'reading…' : `refresh · ${secondsLeft}s`}
+        </button>
       </div>
 
-      {/* The road. It only moves while the board is actually live. */}
-      <div
-        className={`lane h-2 w-full border-y-[3px] border-ink ${live && !stale ? 'animate-lane' : ''}`}
-        aria-hidden="true"
-      />
+      {/* The road. The painted lane fills as the next read approaches, so the wait is visible. */}
+      <div className="relative h-2 w-full border-y-[3px] border-ink bg-ink/40" aria-hidden="true">
+        <div
+          className="lane h-full transition-[width] duration-1000 ease-linear"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+
+      {live && (
+        <span className="-mt-1 w-full text-[11px] font-medium text-paper/45">
+          last read {ago(state.board.fetchedAt)}
+          {stale && ' · the last attempt failed, showing what was already loaded'}
+        </span>
+      )}
     </header>
   );
 }

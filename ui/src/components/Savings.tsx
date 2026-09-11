@@ -34,6 +34,11 @@ export function Savings({ convoys }: { convoys: Convoy[] }) {
           {savedCtc.toFixed(5)}
         </span>
         <span className="text-sm font-bold">CTC</span>
+        {alone > 0 && (
+          <span className="ml-auto border-[3px] border-ink bg-escort px-3 py-1 font-display text-2xl leading-none tabular-nums">
+            {(alone / shared).toFixed(1)}× cheaper
+          </span>
+        )}
       </div>
     </div>
   );

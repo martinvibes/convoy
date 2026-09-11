@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { EventLog } from 'ethers';
 import { chain, provider, routerContract, registryContract } from './chain';
 
 export type Convoy = {
   block: number;
+  txHash: string;
   relayer: string;
   queries: number;
   facts: number;
@@ -12,12 +13,22 @@ export type Convoy = {
 
 export type Fact = {
   block: number;
+  txHash: string;
   factId: string;
   callback: string;
   accepted: boolean;
+  height: number;
+  txIndex: number;
 };
 
-export type Skip = { block: number; queryId: string; reason: number };
+export type Skip = {
+  block: number;
+  txHash: string;
+  queryId: string;
+  reason: number;
+  height: number;
+  txIndex: number;
+};
 
 export type Route = {
   subId: string;
@@ -30,6 +41,7 @@ export type Route = {
 
 export type Board = {
   head: number;
+  fetchedAt: number;
   totals: { batches: number; queries: number; hashes: number; facts: number };
   convoys: Convoy[];
   facts: Fact[];
@@ -37,13 +49,13 @@ export type Board = {
   routes: Route[];
 };
 
-type State =
+export type State =
   | { status: 'undeployed' }
   | { status: 'loading' }
   | { status: 'error'; message: string }
   | { status: 'ready'; board: Board; stale: boolean };
 
-const REFRESH_MS = 10_000;
+export const REFRESH_MS = 15_000;
 
 async function load(): Promise<Board> {
   const router = routerContract()!;
@@ -81,6 +93,7 @@ async function load(): Promise<Board> {
 
   return {
     head,
+    fetchedAt: Date.now(),
     totals: {
       batches: Number(batches),
       queries: Number(queries),
@@ -89,6 +102,7 @@ async function load(): Promise<Board> {
     },
     convoys: (convoyLogs as EventLog[]).map((ev) => ({
       block: ev.blockNumber,
+      txHash: ev.transactionHash,
       relayer: ev.args.relayer as string,
       queries: Number(ev.args.queries),
       facts: Number(ev.args.facts),
@@ -96,51 +110,75 @@ async function load(): Promise<Board> {
     })),
     facts: (factLogs as EventLog[]).map((ev) => ({
       block: ev.blockNumber,
+      txHash: ev.transactionHash,
       factId: ev.args.factId as string,
       callback: ev.args.callback as string,
       accepted: ev.args.accepted as boolean,
+      height: Number(ev.args.height),
+      txIndex: Number(ev.args.txIndex),
     })),
     skips: (skipLogs as EventLog[]).map((ev) => ({
       block: ev.blockNumber,
+      txHash: ev.transactionHash,
       queryId: ev.args.queryId as string,
       reason: Number(ev.args.reason),
+      height: Number(ev.args.height),
+      txIndex: Number(ev.args.txIndex),
     })),
     routes,
   };
 }
 
-export function useConvoy(): State {
+export function useConvoy() {
   const [state, setState] = useState<State>(
     chain.router ? { status: 'loading' } : { status: 'undeployed' },
   );
+  const [nextRefreshAt, setNextRefreshAt] = useState(Date.now() + REFRESH_MS);
+  const [refreshing, setRefreshing] = useState(false);
+  const alive = useRef(true);
 
-  useEffect(() => {
+  const refresh = useCallback(async () => {
     if (!chain.router) return;
-    let live = true;
-
-    const poll = async () => {
-      try {
-        const board = await load();
-        if (live) setState({ status: 'ready', board, stale: false });
-      } catch (err) {
-        if (!live) return;
-        // A failed refresh should not blank a board that is already showing good data. Public RPCs
-        // time out; the last known state stays up and is marked stale.
-        setState((prev) =>
-          prev.status === 'ready'
-            ? { ...prev, stale: true }
-            : { status: 'error', message: (err as Error).message },
-        );
+    setRefreshing(true);
+    try {
+      const board = await load();
+      if (alive.current) setState({ status: 'ready', board, stale: false });
+    } catch (err) {
+      if (!alive.current) return;
+      // A failed refresh must not blank a board that is already showing good data. Public RPCs time
+      // out; the last known state stays up and is marked stale instead.
+      setState((prev) =>
+        prev.status === 'ready'
+          ? { ...prev, stale: true }
+          : { status: 'error', message: (err as Error).message },
+      );
+    } finally {
+      if (alive.current) {
+        setRefreshing(false);
+        setNextRefreshAt(Date.now() + REFRESH_MS);
       }
-    };
-
-    void poll();
-    const timer = setInterval(poll, REFRESH_MS);
-    return () => {
-      live = false;
-      clearInterval(timer);
-    };
+    }
   }, []);
 
-  return state;
+  useEffect(() => {
+    alive.current = true;
+    void refresh();
+    const timer = setInterval(() => void refresh(), REFRESH_MS);
+    return () => {
+      alive.current = false;
+      clearInterval(timer);
+    };
+  }, [refresh]);
+
+  return { state, refresh, refreshing, nextRefreshAt };
+}
+
+/** A once-a-second tick, for anything that counts down rather than waiting on the chain. */
+export function useNow(intervalMs = 1000): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), intervalMs);
+    return () => clearInterval(t);
+  }, [intervalMs]);
+  return now;
 }

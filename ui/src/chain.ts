@@ -10,6 +10,7 @@ const d = deployments as Record<string, string>;
 
 export const chain = {
   rpc: 'https://rpc.cc3-testnet.creditcoin.network',
+  sourceRpc: 'https://ethereum-sepolia-rpc.publicnode.com',
   explorer: 'https://creditcoin-testnet.blockscout.com',
   sepoliaExplorer: 'https://sepolia.etherscan.io',
   router: d.CONVOY_ROUTER_ADDRESS ?? null,
@@ -28,8 +29,8 @@ export const chain = {
 
 export const ROUTER_ABI = [
   'event ConvoyDelivered(address indexed relayer, uint64 indexed chainKey, uint256 queries, uint256 facts, uint256 continuityHashes)',
-  'event FactDelivered(bytes32 indexed factId, bytes32 indexed subId, address indexed callback, bool accepted)',
-  'event QuerySkipped(bytes32 indexed queryId, uint8 reason)',
+  'event FactDelivered(bytes32 indexed factId, bytes32 indexed subId, address indexed callback, bool accepted, uint64 height, uint64 txIndex)',
+  'event QuerySkipped(bytes32 indexed queryId, uint8 reason, uint64 height, uint64 txIndex)',
   'function totalBatches() view returns (uint256)',
   'function totalQueriesVerified() view returns (uint256)',
   'function totalContinuityHashes() view returns (uint256)',
@@ -42,6 +43,33 @@ export const REGISTRY_ABI = [
 ];
 
 export const provider = new JsonRpcProvider(chain.rpc, undefined, { staticNetwork: true });
+
+/**
+ * Sepolia, read directly from the browser as well. A fact carries the height and index of the
+ * transaction it was built from, not its hash, because the router never sees a hash. Resolving the
+ * pair against the source chain is what turns an internal id into a link anyone can check.
+ */
+export const sourceProvider = new JsonRpcProvider(chain.sourceRpc, undefined, {
+  staticNetwork: true,
+});
+
+const blockCache = new Map<number, Promise<readonly string[]>>();
+
+export async function sourceTxHash(height: number, txIndex: number): Promise<string | null> {
+  if (!blockCache.has(height)) {
+    // getBlock without prefetch returns hashes only, which is one small response per block rather
+    // than every transaction in it.
+    blockCache.set(
+      height,
+      sourceProvider.getBlock(height).then((b) => b?.transactions ?? []),
+    );
+  }
+  try {
+    return (await blockCache.get(height)!)[txIndex] ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export const routerContract = () =>
   chain.router ? new Contract(chain.router, ROUTER_ABI, provider) : null;
@@ -68,3 +96,15 @@ export const SKIP_REASON: Record<number, string> = {
 
 export const shortHash = (h: string) => `${h.slice(0, 8)}…${h.slice(-4)}`;
 export const commas = (n: number | bigint) => Number(n).toLocaleString('en-US');
+
+export const txUrl = (hash: string) => `${chain.explorer}/tx/${hash}`;
+export const addressUrl = (a: string) => `${chain.explorer}/address/${a}`;
+export const sourceTxUrl = (hash: string) => `${chain.sepoliaExplorer}/tx/${hash}`;
+
+export function ago(ms: number): string {
+  const s = Math.round((Date.now() - ms) / 1000);
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  return `${Math.floor(m / 60)}h ago`;
+}

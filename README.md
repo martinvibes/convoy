@@ -64,12 +64,12 @@ That is the product.
 
 | contract | address |
 |---|---|
-| ConvoyRouter | `0x31ce792A617FF45DFD22d43D6f4034D0410c3FfD` |
-| SubscriptionRegistry | `0x152Acc890963b73458903968eA8AEFB699E902cC` |
-| RelayerBond | `0x263F4353e937de024e5BaA1E38d44718DAa3738f` |
-| PassportSubscriber | `0x70c255C4bb0718c2CF9BEC0CBadc1835436B4D3c` |
-| EscrowSubscriber | `0xEF47E07Af127C3258957e8771487c70B9cf68cD2` |
-| CouncilSubscriber | `0xbC67c0823Df05e64EF29b1EA9F24D56eb158d444` |
+| ConvoyRouter | `0xD702DFdC1881144145660d92066B71b32Fac298D` |
+| SubscriptionRegistry | `0xcA1A8a243DeC777eede2d63Db1B14fD3E6D02753` |
+| RelayerBond | `0xb418a1EC09a002DCDbBdF775d3F5647B5AdC021D` |
+| PassportSubscriber | `0xCF95FDC334C387bD9efEa3Ea65Cad47563af648a` |
+| EscrowSubscriber | `0xAd3CA72748fF16BbD2A8C6f995C70ED61E875942` |
+| CouncilSubscriber | `0x2F6C91d8046F2f398894C070eB4d5b0934493826` |
 | ConvoyEmitter (Sepolia) | `0x493eC14D06ce94C6F230A5dB7b3f3981949daB6C` |
 
 Six convoys delivered so far, carrying 48 real Sepolia transactions to three unrelated dApps.
