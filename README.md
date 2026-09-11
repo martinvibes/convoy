@@ -109,7 +109,7 @@ Only Convoy's own receipt check stopped it becoming a fact.
 ```bash
 npm install
 forge install foundry-rs/forge-std --no-git
-npm test                         # 11 contract tests + 9 batching-policy tests
+npm test                         # 12 contract tests + 9 batching-policy tests
 npm run check                    # preflight against live CC3 testnet, no keys needed
 npx tsx relayer/index.ts --dry-run   # batching policy, no chain, no keys, no funds
 npm run ui                       # the dispatch board, reads the chain from your browser

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.30;
 
 import {Test, console} from "forge-std/Test.sol";
+import {Vm} from "forge-std/Vm.sol";
 import {INativeQueryVerifier} from
     "@gluwa/asc-contracts/contracts/write-ability/common/INativeQueryVerifier.sol";
 
@@ -31,6 +32,9 @@ contract ConvoyTest is Test {
     bytes32 constant REPAYMENT_TOPIC = keccak256("RepaymentMade(address,bytes32,uint256,bool)");
     bytes32 constant DELIVERY_TOPIC = keccak256("DeliveryAccepted(bytes32,address,uint256)");
     bytes32 constant SIGNAL_TOPIC = keccak256("TreasurySignal(bytes32,uint8,int256)");
+
+    bytes32 constant FACT_DELIVERED = keccak256("FactDelivered(bytes32,bytes32,address,bool,uint64,uint64)");
+    bytes32 constant QUERY_SKIPPED = keccak256("QuerySkipped(bytes32,uint8,uint64,uint64)");
 
     uint96 constant FEE = 0.001 ether;
     uint128 constant MIN_BOND = 1 ether;
@@ -208,6 +212,45 @@ contract ConvoyTest is Test {
         assertEq(facts, 0, "nothing delivered from a failed transaction");
         (uint32 reps,,,) = passport.passports(borrower);
         assertEq(reps, 0, "passport untouched");
+    }
+
+    /// Anyone auditing a delivery has to be able to get back to the Ethereum transaction it came
+    /// from, and the router never sees a source transaction hash. The source height and index are
+    /// the only way back, so both the delivery and the refusal have to carry them.
+    function test_eventsCarryTheSourceLocation() public {
+        uint64[] memory heights = new uint64[](2);
+        heights[0] = 4100;
+        heights[1] = 4101;
+        bytes[] memory txs = new bytes[](2);
+        txs[0] = _repaymentTx(borrower, bytes32("loan-here"), 7 ether, true, 1);
+        txs[1] = _repaymentTx(borrower, bytes32("loan-gone"), 7 ether, true, 0); // reverted at source
+        INativeQueryVerifier.MerkleProof[] memory proofs = new INativeQueryVerifier.MerkleProof[](2);
+        proofs[0] = _merkle(57);
+        proofs[1] = _merkle(58);
+
+        vm.recordLogs();
+        vm.prank(relayer);
+        router.deliver(CHAIN_KEY, heights, txs, proofs, _continuity(10));
+
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bool sawFact;
+        bool sawRefusal;
+        for (uint256 i; i < logs.length; ++i) {
+            if (logs[i].topics[0] == FACT_DELIVERED) {
+                (, uint64 h, uint64 ix) = abi.decode(logs[i].data, (bool, uint64, uint64));
+                assertEq(h, 4100, "delivered fact reports its source height");
+                assertEq(ix, 57, "delivered fact reports its source index");
+                sawFact = true;
+            } else if (logs[i].topics[0] == QUERY_SKIPPED) {
+                (uint8 reason, uint64 h, uint64 ix) = abi.decode(logs[i].data, (uint8, uint64, uint64));
+                assertEq(reason, 2, "refused because the source transaction failed");
+                assertEq(h, 4101, "refusal reports its source height");
+                assertEq(ix, 58, "refusal reports its source index");
+                sawRefusal = true;
+            }
+        }
+        assertTrue(sawFact, "a fact was delivered");
+        assertTrue(sawRefusal, "a refusal was reported");
     }
 
     /// A duplicate costs its own slot and nothing else.
