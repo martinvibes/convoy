@@ -7,6 +7,7 @@ import { Savings } from './components/Savings';
 import { Totals } from './components/Totals';
 import { DispatchLog } from './components/DispatchLog';
 import { Subscribers } from './components/Subscribers';
+import { HowItWorks } from './components/HowItWorks';
 
 export function App() {
   const { state, refresh, refreshing, nextRefreshAt } = useConvoy();
@@ -48,6 +49,8 @@ export function App() {
 
         {board && (
           <div className="space-y-8">
+            <HowItWorks />
+
             <section>
               <Heading
                 note={
