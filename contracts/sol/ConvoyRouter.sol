@@ -71,8 +71,15 @@ contract ConvoyRouter {
     event ConvoyDelivered(
         address indexed relayer, uint64 indexed chainKey, uint256 queries, uint256 facts, uint256 continuityHashes
     );
-    event QuerySkipped(bytes32 indexed queryId, uint8 reason);
-    event FactDelivered(bytes32 indexed factId, bytes32 indexed subId, address indexed callback, bool accepted);
+    event QuerySkipped(bytes32 indexed queryId, uint8 reason, uint64 height, uint64 txIndex);
+    event FactDelivered(
+        bytes32 indexed factId,
+        bytes32 indexed subId,
+        address indexed callback,
+        bool accepted,
+        uint64 height,
+        uint64 txIndex
+    );
 
     error NotBonded();
     error EmptyBatch();
@@ -194,14 +201,14 @@ contract ConvoyRouter {
         bytes32 qId = queryId(chainKey, height, txIndex);
 
         if (processedQueries[qId]) {
-            emit QuerySkipped(qId, SKIP_DUPLICATE);
+            emit QuerySkipped(qId, SKIP_DUPLICATE, height, txIndex);
             return 0;
         }
         processedQueries[qId] = true;
 
         uint8 txType = EvmV1Decoder.getTransactionType(encodedTransaction);
         if (!EvmV1Decoder.isValidTransactionType(txType)) {
-            emit QuerySkipped(qId, SKIP_BAD_TX_TYPE);
+            emit QuerySkipped(qId, SKIP_BAD_TX_TYPE, height, txIndex);
             return 0;
         }
 
@@ -210,7 +217,7 @@ contract ConvoyRouter {
         // The precompile proves inclusion, not success. A reverted source transaction is a real
         // transaction in a real block, and without this check it would be delivered as fact.
         if (receipt.receiptStatus != 1) {
-            emit QuerySkipped(qId, SKIP_SOURCE_TX_FAILED);
+            emit QuerySkipped(qId, SKIP_SOURCE_TX_FAILED, height, txIndex);
             return 0;
         }
 
@@ -271,7 +278,9 @@ contract ConvoyRouter {
             unchecked {
                 ++delivered;
             }
-            emit FactDelivered(fact.factId, ids[k], s.callback, accepted);
+            emit FactDelivered(
+                fact.factId, ids[k], s.callback, accepted, fact.blockHeight, fact.txIndex
+            );
         }
     }
 }
