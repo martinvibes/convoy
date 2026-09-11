@@ -72,21 +72,35 @@ That is the product.
 | CouncilSubscriber | `0xbC67c0823Df05e64EF29b1EA9F24D56eb158d444` |
 | ConvoyEmitter (Sepolia) | `0x493eC14D06ce94C6F230A5dB7b3f3981949daB6C` |
 
-The first real convoy carried nine transactions for three unrelated dApps under one continuity
-proof of 15 hashes. Proven separately they would have needed nine proofs and 135 hashes.
+Six convoys delivered so far, carrying 48 real Sepolia transactions to three unrelated dApps.
 
 ```
-convoys delivered     1
-transactions proven   9
-continuity hashes     15
-facts handed to apps  9
+convoys delivered     6
+transactions proven   48
+continuity hashes     190
+facts handed to apps  36
 
-modelled cost  alone 0.00024615 CTC  vs convoy 0.00002735 CTC  (9.0x)
+per convoy:
+  9 transactions   15 hashes shared    (135 if delivered alone,   9.0x)
+  1 transaction     4 hashes shared      (4 if delivered alone,   1.0x)
+ 10 transactions   30 hashes shared    (300 if delivered alone,  10.0x)
+  8 transactions   17 hashes shared    (136 if delivered alone,   8.0x)
+ 10 transactions  108 hashes shared   (1080 if delivered alone,  10.0x)
+ 10 transactions   16 hashes shared    (160 if delivered alone,  10.0x)
+
+modelled cost  alone 0.00163035 CTC  vs convoy 0.00019310 CTC  (8.4x)
 ```
 
-Separately, a genuinely reverted Sepolia transaction was proven and delivered to the router. The
-precompile verified it happily, because it really is in that block. Convoy refused it with
-`QuerySkipped` reason 2, on chain, in `0x9323ff96…e1cbd`.
+The fifth line is the interesting one. Those transactions sat unclaimed long enough for their
+attestations to start compacting, and the continuity proof went from about 16 hashes to 108. That is
+the cost curve `relayer/batcher.ts` is built around, showing up on a live network.
+
+The most recent convoy is the whole argument in one transaction
+([`0x901e3e42…2658a`](https://creditcoin-testnet.blockscout.com/tx/0x901e3e4286a9f7d58799977b151335549d5e88dc1c27e8b8b2db1efa0ed2658a)):
+ten Sepolia transactions verified under one continuity proof of 16 hashes, nine facts handed to
+three dApps that share nothing, and one transaction refused because it had reverted at the source.
+The precompile verified that tenth proof happily, because the transaction really is in that block.
+Only Convoy's own receipt check stopped it becoming a fact.
 
 `npm run status` prints all of that live from the chain.
 

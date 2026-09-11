@@ -1,8 +1,34 @@
 import { commas, SKIP_REASON } from '../chain';
 import type { Convoy, Skip } from '../useConvoy';
 
+type Row = { block: number; key: string; refused: boolean; text: string; badge: string };
+
+/**
+ * Refusals are grouped by convoy and reason. A convoy that was entirely duplicates produced nine
+ * identical lines, which buried the convoy above it without saying anything the count does not.
+ */
+function groupSkips(skips: Skip[]): Row[] {
+  const buckets = new Map<string, { block: number; reason: number; count: number }>();
+  for (const s of skips) {
+    const key = `${s.block}:${s.reason}`;
+    const hit = buckets.get(key);
+    if (hit) hit.count += 1;
+    else buckets.set(key, { block: s.block, reason: s.reason, count: 1 });
+  }
+  return [...buckets.entries()].map(([key, b]) => ({
+    block: b.block,
+    key,
+    refused: true,
+    text:
+      b.count === 1
+        ? `Threw out one transaction: ${SKIP_REASON[b.reason] ?? 'unknown reason'}`
+        : `Threw out ${b.count} transactions: ${SKIP_REASON[b.reason] ?? 'unknown reason'}`,
+    badge: 'refused',
+  }));
+}
+
 export function DispatchLog({ convoys, skips }: { convoys: Convoy[]; skips: Skip[] }) {
-  const rows = [
+  const rows: Row[] = [
     ...convoys.map((c) => ({
       block: c.block,
       key: `c${c.block}`,
@@ -10,21 +36,13 @@ export function DispatchLog({ convoys, skips }: { convoys: Convoy[]; skips: Skip
       text: `Convoy of ${c.queries} arrived, ${c.facts} fact${c.facts === 1 ? '' : 's'} delivered`,
       badge: `${c.queries}× on one escort`,
     })),
-    ...skips.map((s) => ({
-      block: s.block,
-      key: `s${s.queryId}`,
-      refused: true,
-      text: `Threw out one transaction: ${SKIP_REASON[s.reason] ?? 'unknown reason'}`,
-      badge: 'refused',
-    })),
+    ...groupSkips(skips),
   ]
-    .sort((a, b) => b.block - a.block)
+    .sort((a, b) => b.block - a.block || Number(a.refused) - Number(b.refused))
     .slice(0, 12);
 
   if (rows.length === 0) {
-    return (
-      <div className="block-card p-5 text-sm font-bold">Nothing has been dispatched yet.</div>
-    );
+    return <div className="block-card p-5 text-sm font-bold">Nothing has been dispatched yet.</div>;
   }
 
   return (
