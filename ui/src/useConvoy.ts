@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { EventLog } from 'ethers';
-import { chain, provider, routerContract, registryContract } from './chain';
+import { chain, provider, sourceProvider, routerContract, registryContract, chainInfoContract } from './chain';
 
 export type Convoy = {
   block: number;
@@ -39,6 +39,14 @@ export type Route = {
   fee: bigint;
 };
 
+/** How far Creditcoin's attestor network has got through the source chain. */
+export type Attestation = {
+  attested: number;
+  hash: string;
+  sourceHead: number;
+  lag: number;
+};
+
 export type Board = {
   head: number;
   fetchedAt: number;
@@ -47,6 +55,7 @@ export type Board = {
   facts: Fact[];
   skips: Skip[];
   routes: Route[];
+  attestation: Attestation | null;
 };
 
 export type State =
@@ -62,12 +71,13 @@ async function load(): Promise<Board> {
   const registry = registryContract()!;
   const from = chain.fromBlock;
 
-  const [head, batches, queries, hashes, facts] = await Promise.all([
+  const [head, batches, queries, hashes, facts, attestation] = await Promise.all([
     provider.getBlockNumber(),
     router.totalBatches(),
     router.totalQueriesVerified(),
     router.totalContinuityHashes(),
     router.totalFactsDelivered(),
+    readAttestation(),
   ]);
 
   const [convoyLogs, factLogs, skipLogs, subLogs] = await Promise.all([
@@ -126,7 +136,29 @@ async function load(): Promise<Board> {
       txIndex: Number(ev.args.txIndex),
     })),
     routes,
+    attestation,
   };
+}
+
+/**
+ * The attestor network's progress, straight off the ChainInfo precompile.
+ *
+ * This is the clock the whole system runs on: a Sepolia transaction cannot be proven on Creditcoin
+ * until the attestors have covered its block, so this gap is the wait before any convoy can leave.
+ */
+async function readAttestation(): Promise<Attestation | null> {
+  try {
+    const [latest, sourceHead] = await Promise.all([
+      chainInfoContract().get_latest_attestation_height_and_hash(chain.sourceChainKey),
+      sourceProvider.getBlockNumber(),
+    ]);
+    if (!latest.exists) return null;
+    const attested = Number(latest.height);
+    return { attested, hash: latest.hash as string, sourceHead, lag: sourceHead - attested };
+  } catch {
+    // One precompile hiccup must not take the board down with it.
+    return null;
+  }
 }
 
 export function useConvoy() {

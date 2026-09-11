@@ -8,6 +8,7 @@ import { Totals } from './components/Totals';
 import { DispatchLog } from './components/DispatchLog';
 import { Subscribers } from './components/Subscribers';
 import { HowItWorks } from './components/HowItWorks';
+import { Attestors } from './components/Attestors';
 
 export function App() {
   const { state, refresh, refreshing, nextRefreshAt } = useConvoy();
@@ -77,6 +78,13 @@ export function App() {
                 <Savings convoys={board.convoys} />
               </section>
             )}
+
+            <section>
+              <Heading note="nothing can travel until they have covered its block">
+                Where the attestors are
+              </Heading>
+              <Attestors attestation={board.attestation} />
+            </section>
 
             <section>
               <Heading>Since deployment</Heading>

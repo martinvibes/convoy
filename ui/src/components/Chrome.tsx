@@ -66,7 +66,7 @@ export function Copy({ value, label }: { value: string; label?: string }) {
           setDone(false);
         }
       }}
-      className="border-2 border-ink bg-paper px-1.5 py-0.5 font-mono text-[10px] font-bold hover:bg-escort"
+      className="border-2 border-ink bg-paper px-1.5 py-0.5 font-mono text-[10px] font-bold text-ink hover:bg-escort"
       aria-label={`Copy ${label ?? value}`}
     >
       {done ? 'copied' : 'copy'}

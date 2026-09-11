@@ -20,6 +20,10 @@ export const chain = {
   // Creditcoin's public RPC rejects an unbounded eth_getLogs with "query timeout of 10 seconds
   // exceeded", so every scan on this page starts at the deployment block.
   fromBlock: Number(d.DEPLOY_BLOCK ?? 0),
+  // Sepolia's key in Creditcoin's attestation registry. It is not the EVM chain id.
+  sourceChainKey: 1,
+  // Sepolia's slot time. Used only to turn a block gap into a number of minutes.
+  sourceBlockSeconds: 12,
   apps: [
     { key: 'passport', name: 'credit passport', address: d.PASSPORT_ADDRESS, fill: 'bg-passport' },
     { key: 'escrow', name: 'delivery escrow', address: d.ESCROW_ADDRESS, fill: 'bg-escrow' },
@@ -35,6 +39,13 @@ export const ROUTER_ABI = [
   'function totalQueriesVerified() view returns (uint256)',
   'function totalContinuityHashes() view returns (uint256)',
   'function totalFactsDelivered() view returns (uint256)',
+];
+
+/** Creditcoin's attestation registry, readable by anyone with an eth_call. */
+export const CHAIN_INFO_ADDRESS = '0x0000000000000000000000000000000000000fd3';
+
+export const CHAIN_INFO_ABI = [
+  'function get_latest_attestation_height_and_hash(uint64 chainKey) view returns (tuple(uint64 height, bytes32 hash, bool isAttestation, bool exists))',
 ];
 
 export const REGISTRY_ABI = [
@@ -77,6 +88,8 @@ export const routerContract = () =>
 export const registryContract = () =>
   chain.registry ? new Contract(chain.registry, REGISTRY_ABI, provider) : null;
 
+export const chainInfoContract = () => new Contract(CHAIN_INFO_ADDRESS, CHAIN_INFO_ABI, provider);
+
 /** The published per-verification cost model: a flat call cost plus one term per continuity hash. */
 export const costCtc = (hashes: number, proofs: number) =>
   2.3e-5 * proofs + 2.9e-7 * hashes;
@@ -100,6 +113,15 @@ export const commas = (n: number | bigint) => Number(n).toLocaleString('en-US');
 export const txUrl = (hash: string) => `${chain.explorer}/tx/${hash}`;
 export const addressUrl = (a: string) => `${chain.explorer}/address/${a}`;
 export const sourceTxUrl = (hash: string) => `${chain.sepoliaExplorer}/tx/${hash}`;
+export const sourceBlockUrl = (n: number) => `${chain.sepoliaExplorer}/block/${n}`;
+
+/** A block gap on the source chain, said as a length of time. */
+export function blocksAsTime(blocks: number): string {
+  const s = Math.max(0, blocks) * chain.sourceBlockSeconds;
+  if (s < 60) return `${s}s`;
+  const m = Math.round(s / 60);
+  return m < 60 ? `${m} min` : `${(m / 60).toFixed(1)} h`;
+}
 
 export function ago(ms: number): string {
   const s = Math.round((Date.now() - ms) / 1000);

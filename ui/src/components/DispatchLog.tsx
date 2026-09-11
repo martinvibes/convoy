@@ -1,6 +1,6 @@
 import { commas, shortHash, txUrl, SKIP_REASON } from '../chain';
 import type { Convoy, Skip } from '../useConvoy';
-import { HashLink } from './Chrome';
+import { HashLink, Copy } from './Chrome';
 
 type Row = {
   block: number;
@@ -72,32 +72,44 @@ export function DispatchLog({
     <ul className="block-card divide-y-[3px] divide-ink">
       {rows.map((r) => {
         const isSelected = r.selectable && r.txHash === selected;
-        const body = (
+        // The copy control is a button, so the row cannot also be one: nesting them is invalid and
+        // swallows the click. The row's text is the click target, and the row highlights with it.
+        const label = (
           <>
             <span className="text-sm font-bold">{r.text}</span>
             <span className="shrink-0 border-2 border-ink bg-paper px-1.5 py-0.5 font-mono text-[11px] font-bold tabular-nums">
               {r.badge}
             </span>
-            <span className="ml-auto shrink-0 font-mono text-[11px] tabular-nums">
-              <HashLink href={txUrl(r.txHash)} title={r.txHash}>
-                {shortHash(r.txHash)}
-              </HashLink>
-              <span className="ml-2 opacity-60">block {commas(r.block)}</span>
-            </span>
           </>
         );
 
-        const shared = 'flex w-full flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-3 text-left';
-
         return (
-          <li key={r.key} className={r.refused ? 'bg-refused' : isSelected ? 'bg-escort' : ''}>
+          <li
+            key={r.key}
+            className={`flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 ${
+              r.refused ? 'bg-refused' : isSelected ? 'bg-escort' : 'hover:bg-escort/40'
+            }`}
+          >
             {r.selectable ? (
-              <button type="button" onClick={() => onSelect(r.txHash)} className={`${shared} hover:bg-escort`}>
-                {body}
+              <button
+                type="button"
+                onClick={() => onSelect(r.txHash)}
+                className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-left"
+                aria-pressed={isSelected}
+              >
+                {label}
               </button>
             ) : (
-              <div className={shared}>{body}</div>
+              <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">{label}</span>
             )}
+
+            <span className="ml-auto flex shrink-0 items-center gap-2 font-mono text-[11px] tabular-nums">
+              <HashLink href={txUrl(r.txHash)} title={r.txHash}>
+                {shortHash(r.txHash)}
+              </HashLink>
+              <Copy value={r.txHash} label="convoy transaction hash" />
+              <span className="opacity-60">block {commas(r.block)}</span>
+            </span>
           </li>
         );
       })}

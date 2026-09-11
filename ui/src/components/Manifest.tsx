@@ -8,6 +8,7 @@ import {
   sourceTxHash,
   sourceTxUrl,
   txUrl,
+  addressUrl,
   SKIP_REASON,
 } from '../chain';
 import type { Convoy, Fact, Skip } from '../useConvoy';
@@ -95,11 +96,13 @@ export function Manifest({
             <span className="text-xs font-bold uppercase tracking-[0.14em]">
               Cargo {isLatest ? '' : '· earlier convoy'}
             </span>
-            <span className="font-mono text-xs tabular-nums">
+            <span className="flex items-center gap-2 font-mono text-xs tabular-nums">
               delivered in{' '}
               <HashLink href={txUrl(convoy.txHash)} title={convoy.txHash}>
-                {shortHash(convoy.txHash)}
+                <span className="lg:hidden">{shortHash(convoy.txHash)}</span>
+                <span className="hidden lg:inline">{convoy.txHash}</span>
               </HashLink>
+              <Copy value={convoy.txHash} label="convoy transaction hash" />
             </span>
           </div>
 
@@ -135,19 +138,30 @@ function CargoRow({ item, index }: { item: Item; index: number }) {
     };
   }, [item.height, item.txIndex]);
 
+  const source = hash ? (
+    <>
+      <HashLink href={sourceTxUrl(hash)} title={`Sepolia ${hash}`}>
+        {shortHash(hash)}
+      </HashLink>
+      <Copy value={hash} label="source transaction hash" />
+    </>
+  ) : (
+    <span className="opacity-50">resolving…</span>
+  );
+
   return (
     <li className={`flex items-center gap-x-3 px-4 py-2.5 sm:gap-x-4 sm:px-5 ${item.fill}`}>
       <span className="w-6 shrink-0 font-display text-lg leading-none tabular-nums">{index}</span>
-      <span className="hidden shrink-0 font-mono text-xs sm:inline sm:text-sm">
-        {hash ? (
-          <HashLink href={sourceTxUrl(hash)} title={`Sepolia ${hash}`}>
-            {shortHash(hash)}
-          </HashLink>
-        ) : (
-          <span className="opacity-50">resolving…</span>
-        )}
+      <span className="hidden shrink-0 items-center gap-1.5 font-mono text-xs sm:flex sm:text-sm">
+        {source}
       </span>
-      <span className="min-w-0 flex-1 truncate text-sm font-bold">{item.label}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-bold">{item.label}</span>
+        {/* The hash is the point of the row, so it stays on the narrowest screen, just underneath. */}
+        <span className="mt-0.5 flex items-center gap-1.5 font-mono text-[11px] sm:hidden">
+          {source}
+        </span>
+      </span>
       <span className="hidden shrink-0 font-mono text-[11px] tabular-nums opacity-70 lg:inline">
         block {commas(item.height)} · tx {item.txIndex}
       </span>
@@ -169,7 +183,7 @@ function Footer({ convoy }: { convoy: Convoy }) {
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t-[3px] border-ink bg-paper px-4 py-2.5 text-xs sm:px-5">
       <span className="font-bold">
         relayed by{' '}
-        <HashLink href={txUrl(convoy.txHash)} title={convoy.relayer}>
+        <HashLink href={addressUrl(convoy.relayer)} title={convoy.relayer}>
           {convoy.relayer.slice(0, 8)}…{convoy.relayer.slice(-4)}
         </HashLink>
       </span>
