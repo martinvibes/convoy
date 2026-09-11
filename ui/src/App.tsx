@@ -11,7 +11,7 @@ export function App() {
   const state = useConvoy();
 
   return (
-    <div className="min-h-screen p-2 sm:p-4">
+    <div className="min-h-screen overflow-x-hidden p-2 sm:p-4">
       <div className="mx-auto w-full max-w-6xl">
         <Header state={state} />
 
@@ -88,12 +88,12 @@ function Header({ state }: { state: ReturnType<typeof useConvoy> }) {
   return (
     <header className="mb-8 flex flex-wrap items-center gap-x-6 gap-y-3">
       <h1 className="font-display text-5xl leading-none text-escort sm:text-6xl">CONVOY</h1>
-      <p className="max-w-[34ch] text-sm font-medium leading-snug text-paper/80">
+      <p className="w-full max-w-[34ch] text-sm font-medium leading-snug text-paper/80 sm:w-auto">
         Ten shipments, one escort. Shared proof delivery for apps on Creditcoin that have nothing to
         do with each other.
       </p>
 
-      <div className="ml-auto flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
         {chain.router && (
           <a
             href={`${chain.explorer}/address/${chain.router}`}

@@ -2,9 +2,11 @@ import type { ReactNode } from 'react';
 
 export function Heading({ children, note }: { children: ReactNode; note?: string }) {
   return (
-    <div className="mb-3 flex items-end justify-between gap-4">
+    <div className="mb-3 flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
       <h2 className="text-2xl leading-none text-paper sm:text-3xl">{children}</h2>
-      {note && <span className="pb-[2px] text-xs font-medium text-paper/60">{note}</span>}
+      {note && (
+        <span className="w-full pb-[2px] text-xs font-medium text-paper/60 sm:w-auto">{note}</span>
+      )}
     </div>
   );
 }

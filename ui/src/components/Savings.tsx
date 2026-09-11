@@ -54,7 +54,7 @@ function Bar({
 }) {
   return (
     <div className="mb-3 last:mb-0">
-      <div className="mb-1 flex items-baseline justify-between gap-3">
+      <div className="mb-1 flex flex-wrap items-baseline justify-between gap-x-3">
         <span className="text-sm font-bold">{label}</span>
         <span className="font-mono text-xs tabular-nums">
           {commas(proofs)} proof{proofs === 1 ? '' : 's'} · {commas(hashes)} hashes

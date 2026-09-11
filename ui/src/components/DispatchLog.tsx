@@ -40,7 +40,7 @@ export function DispatchLog({ convoys, skips }: { convoys: Convoy[]; skips: Skip
           <span className="border-2 border-ink bg-paper px-1.5 py-0.5 font-mono text-[11px] font-bold tabular-nums">
             {r.badge}
           </span>
-          <span className="ml-auto font-mono text-[11px] tabular-nums">
+          <span className="ml-auto shrink-0 font-mono text-[11px] tabular-nums">
             block {commas(r.block)}
           </span>
         </li>

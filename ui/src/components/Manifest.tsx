@@ -61,7 +61,7 @@ export function Manifest({
       </div>
 
       <div>
-        <div className="flex items-center justify-between gap-3 border-b-[3px] border-ink px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] sm:px-5">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 border-b-[3px] border-ink px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] sm:px-5">
           <span>Cargo</span>
           <span className="font-mono tabular-nums normal-case tracking-normal">
             block {commas(convoy.block)}
@@ -77,14 +77,16 @@ export function Manifest({
             {cargo.map((item, i) => (
               <li
                 key={item.id}
-                className={`flex items-center gap-3 px-4 py-2.5 sm:gap-4 sm:px-5 ${item.fill}`}
+                className={`flex items-center gap-x-3 px-4 py-2.5 sm:gap-x-4 sm:px-5 ${item.fill}`}
               >
                 <span className="w-6 shrink-0 font-display text-lg leading-none tabular-nums">
                   {i + 1}
                 </span>
-                <span className="shrink-0 font-mono text-xs sm:text-sm">{shortHash(item.id)}</span>
-                <span className="truncate text-sm font-bold">{item.label}</span>
-                <span className="ml-auto shrink-0 text-xs font-bold uppercase tracking-[0.1em]">
+                <span className="hidden shrink-0 font-mono text-xs sm:inline sm:text-sm">
+                  {shortHash(item.id)}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm font-bold">{item.label}</span>
+                <span className="shrink-0 text-xs font-bold uppercase tracking-[0.1em]">
                   {item.state}
                 </span>
               </li>
