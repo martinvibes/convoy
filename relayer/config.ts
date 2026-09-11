@@ -55,6 +55,12 @@ export const config = {
   maxBatchSize: Number(optional('MAX_BATCH_SIZE', '10')),
   maxBatchRange: Number(optional('MAX_BATCH_RANGE', '1000')),
   maxWaitMs: Number(optional('MAX_WAIT_MS', '180000')),
+
+  // The SDK's waitUntilHeightAttested defaults to a 60 second timeout. Measured lag between a
+  // Sepolia block and its attestation on CC3 testnet is about 6.4 minutes, so the default always
+  // throws. 20 minutes leaves room for a slow attestation round.
+  attestationWaitMs: Number(optional('ATTESTATION_WAIT_MS', '1200000')),
+  attestationPollMs: Number(optional('ATTESTATION_POLL_MS', '5000')),
   pollIntervalMs: Number(optional('POLL_INTERVAL_MS', '12000')),
 };
 

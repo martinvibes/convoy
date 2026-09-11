@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
+  body {
+    @apply bg-asphalt font-sans text-ink antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display font-normal uppercase tracking-wide;
+  }
+
+  ::selection {
+    @apply bg-escort text-ink;
+  }
+
+  :focus-visible {
+    outline: 3px solid #0b0b0b;
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Every surface is a block: hard stroke, hard shadow, no blur and no gradient anywhere. */
+  .block-card {
+    @apply border-[3px] border-ink bg-paper shadow-hard;
+  }
+
+  .block-card-lg {
+    @apply border-4 border-ink bg-paper shadow-hard-lg;
+  }
+
+  /* The painted lane markings the convoy travels on. One motion on the page, and only while
+     something is actually moving. */
+  .lane {
+    background-image: repeating-linear-gradient(
+      to right,
+      #ffd84d 0 48px,
+      transparent 48px 96px
+    );
+  }
+}

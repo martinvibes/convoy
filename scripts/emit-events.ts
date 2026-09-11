@@ -35,12 +35,14 @@ for (let i = 0; i < count; i++) {
 }
 
 console.log('\nnow the negative case: a transaction that reverts after emitting');
-try {
-  const tx = await emitter.repayThenRevert(keccak('reverting'), parseEther('999'), {
-    gasLimit: 200_000,
-  });
-  const receipt = await tx.wait();
-  console.log(`  included in block ${receipt.blockNumber} with status ${receipt.status}: ${receipt.hash}`);
-} catch (err) {
-  console.log(`  reverted as expected: ${(err as Error).message.slice(0, 120)}`);
-}
+// tx.wait() throws on a reverted receipt in ethers v6, which would hide the very transaction this
+// case exists to produce. waitForTransaction returns the receipt either way. The explicit gasLimit
+// skips estimation, which would otherwise refuse to send it at all.
+const failing = await emitter.repayThenRevert(keccak('reverting'), parseEther('999'), {
+  gasLimit: 200_000,
+});
+const failed = await wallet.provider!.waitForTransaction(failing.hash);
+console.log(`  included in block ${failed!.blockNumber} index ${failed!.index} with status ${failed!.status}`);
+console.log(`  ${failing.hash}`);
+console.log(`\n  the precompile will happily prove this one is in a block. Convoy still refuses it:`);
+console.log(`    npx tsx scripts/prove-failure.ts ${failing.hash}`);

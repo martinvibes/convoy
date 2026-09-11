@@ -10,6 +10,7 @@
 import { JsonRpcProvider, Wallet, Contract } from 'ethers';
 import { chainInfo, proofProvider } from '@gluwa/usc-sdk';
 import { config, abiOf } from './config.js';
+import { waitForAttestation } from './attestation.js';
 import { planBatch, savings, modelledCostCtc, type PendingItem } from './batcher.js';
 
 interface Route {
@@ -86,7 +87,7 @@ async function deliverConvoy(
   const highest = Math.max(...batch.map((i) => i.blockNumber));
 
   log(`convoy of ${batch.length}: waiting for block ${highest} to be attested`);
-  await chainInfoProvider.waitUntilHeightAttested(chainKey, highest);
+  await waitForAttestation(chainInfoProvider, chainKey, highest, (m) => log(m));
 
   const result = await builder.getBatchProof(batch.map((i) => i.txHash));
   if (!result.success || !result.data) {
