@@ -170,10 +170,9 @@ function Header({
         />
       </div>
 
-      {live && (
-        <span className="-mt-1 w-full text-[11px] font-medium text-paper/45">
-          last read {ago(state.board.fetchedAt)}
-          {stale && ' · the last attempt failed, showing what was already loaded'}
+      {stale && (
+        <span className="-mt-1 w-full text-[11px] font-medium text-refused">
+          The last read failed. This is what was already loaded, from {ago(state.board.fetchedAt)}.
         </span>
       )}
     </header>
