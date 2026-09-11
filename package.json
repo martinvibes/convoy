@@ -3,16 +3,20 @@
   "version": "0.1.0",
   "license": "MIT",
   "private": true,
+  "type": "module",
   "description": "Shared Attestcoin proof-delivery layer for Creditcoin. Many dApps, one continuity proof.",
   "scripts": {
     "build": "forge build",
-    "test": "forge test -vv",
+    "test": "forge test -vv && tsx --test relayer/batcher.test.ts",
     "relayer": "tsx relayer/index.ts",
     "deploy:creditcoin": "tsx scripts/deploy-creditcoin.ts",
     "deploy:sepolia": "tsx scripts/deploy-sepolia.ts",
     "emit": "tsx scripts/emit-events.ts",
     "bench": "tsx bench/bench.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:contracts": "forge test -vv",
+    "test:relayer": "tsx --test relayer/batcher.test.ts",
+    "check": "tsx scripts/check-setup.ts"
   },
   "dependencies": {
     "@gluwa/asc-contracts": "0.2.1",

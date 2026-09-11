@@ -63,8 +63,18 @@ That is the product.
 ```bash
 npm install
 forge install foundry-rs/forge-std --no-git
-forge test                       # 11 tests, real decoder, etched mock precompile
+npm test                         # 11 contract tests + 9 batching-policy tests
+npm run check                    # preflight against live CC3 testnet, no keys needed
 npx tsx relayer/index.ts --dry-run   # batching policy, no chain, no keys, no funds
+```
+
+`npm run check` talks to the real ChainInfo precompile and prints what is currently attested:
+
+```
+Creditcoin  chain id 102031  head 5469349  https://rpc.cc3-testnet.creditcoin.network
+source chains readable from here:
+  chainKey 3   Ethereum           evm chain id 1          latest attestation 25954240 (attestation)
+  chainKey 1   Sepolia ethereum   evm chain id 11155111   latest attestation 11682000 (attestation)
 ```
 
 The dry run is the fastest way to see the argument:
