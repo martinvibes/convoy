@@ -126,11 +126,18 @@ The hero is the manifest of one convoy: the shared escort on the left, the cargo
 right, one coloured block per subscribing dApp and red for anything refused. Under it, two bars for
 what those same transactions would have cost travelling alone.
 
+Below that is the clock the whole system runs on: how far Creditcoin's attestor network has got
+through Sepolia, read live off the ChainInfo precompile. Nothing can be proven from the red stretch
+yet, so that gap is the honest answer to how long a delivery takes, and it is where the six-minute
+wait in every run below comes from.
+
 Nothing on it is unverifiable. Every cargo row resolves its source block height and transaction
-index against Sepolia and links the real Ethereum transaction. Every convoy and refusal links to the
-Creditcoin transaction that delivered it. The dispatch log is selectable, so any earlier convoy can
-be pulled up into the manifest. The refresh is visible rather than silent: a countdown to the next
-read, a button to force one, and a failed read that says so while keeping the data it already had.
+index against Sepolia and links the real Ethereum transaction, on a phone as well as a desktop.
+Every convoy and refusal links to the Creditcoin transaction that delivered it, and every hash and
+address on the page can be copied in one click. The dispatch log is selectable, so any earlier
+convoy can be pulled up into the manifest, and each row carries the time its block was mined. The
+refresh is visible rather than silent: a countdown to the next read, a button to force one, and a
+failed read that says so while keeping the data it already had.
 
 `npm run check` talks to the real ChainInfo precompile and prints what is currently attested:
 

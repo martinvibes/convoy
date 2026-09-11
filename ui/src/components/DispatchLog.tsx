@@ -1,5 +1,7 @@
-import { commas, shortHash, txUrl, SKIP_REASON } from '../chain';
+import { useEffect, useState } from 'react';
+import { ago, blockTime, commas, shortHash, txUrl, SKIP_REASON } from '../chain';
 import type { Convoy, Skip } from '../useConvoy';
+import { useNow } from '../useConvoy';
 import { HashLink, Copy } from './Chrome';
 
 type Row = {
@@ -36,6 +38,24 @@ function groupSkips(skips: Skip[]): Row[] {
         : `Threw out ${b.count} transactions: ${SKIP_REASON[b.reason] ?? 'unknown reason'}`,
     badge: 'refused',
   }));
+}
+
+/** When a row landed, from the block's own timestamp rather than an assumed block time. */
+function When({ block }: { block: number }) {
+  const [at, setAt] = useState<number | null>(null);
+  useNow(10_000);
+
+  useEffect(() => {
+    let live = true;
+    void blockTime(block).then((t) => {
+      if (live) setAt(t);
+    });
+    return () => {
+      live = false;
+    };
+  }, [block]);
+
+  return at ? <> · {ago(at)}</> : null;
 }
 
 export function DispatchLog({
@@ -108,7 +128,10 @@ export function DispatchLog({
                 {shortHash(r.txHash)}
               </HashLink>
               <Copy value={r.txHash} label="convoy transaction hash" />
-              <span className="opacity-60">block {commas(r.block)}</span>
+              <span className="opacity-60">
+                block {commas(r.block)}
+                <When block={r.block} />
+              </span>
             </span>
           </li>
         );

@@ -82,6 +82,27 @@ export async function sourceTxHash(height: number, txIndex: number): Promise<str
   }
 }
 
+/**
+ * When a Creditcoin block was mined, cached for the life of the page.
+ *
+ * A block's timestamp never changes, so this is fetched once per block and never again, which keeps
+ * a fifteen-second refresh from re-asking the public RPC for the same fourteen answers.
+ */
+const timeCache = new Map<number, Promise<number | null>>();
+
+export function blockTime(n: number): Promise<number | null> {
+  if (!timeCache.has(n)) {
+    timeCache.set(
+      n,
+      provider
+        .getBlock(n)
+        .then((b) => (b ? b.timestamp * 1000 : null))
+        .catch(() => null),
+    );
+  }
+  return timeCache.get(n)!;
+}
+
 export const routerContract = () =>
   chain.router ? new Contract(chain.router, ROUTER_ABI, provider) : null;
 
