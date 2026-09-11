@@ -65,11 +65,19 @@ dashboard shows the same thing in a browser with no backend between.
 | RelayerBond | `0xb418a1EC09a002DCDbBdF775d3F5647B5AdC021D` |
 | ConvoyEmitter (Sepolia) | `0x493eC14D06ce94C6F230A5dB7b3f3981949daB6C` |
 
-The one transaction worth opening is the ten-transaction convoy: ten real Sepolia transactions
-verified under one continuity proof, facts handed to three dApps that share nothing, and one
-transaction refused because it had reverted at the source. The precompile verified that tenth proof
-happily, because the transaction really is in that block. Only Convoy's own receipt check stopped it
-becoming a fact.
+The one transaction worth opening is
+[`0xec3f6378…b822`](https://creditcoin-testnet.blockscout.com/tx/0xec3f63786e0e4549e51a971fd30072e4a2f820a7c6d6a18303bcd1888c4eb822):
+ten real Sepolia transactions verified under one continuity proof of 20 hashes rather than 200, nine
+facts handed to three dApps that share nothing, and one transaction refused because it had reverted
+at the source. The precompile verified that tenth proof happily, because the transaction really is
+in that block. Only Convoy's own receipt check stopped it becoming a fact.
+
+Three convoys have been delivered on this deployment, carrying 26 Sepolia transactions and paying
+for 50 continuity hashes where separate deliveries would have paid for 448. In the published cost
+model that is 0.00008350 CTC against 0.00072792, a factor of 8.7. The most recent one,
+[`0x5e32d031…055d`](https://creditcoin-testnet.blockscout.com/tx/0x5e32d031550acf9f737b982ba1554d3614b2350c8bab17a3fa22548a7cdd055d),
+is the relayer working unattended: it filled a batch of ten from three unrelated routes, waited for
+the attestor network to cover the last source block, and shipped.
 
 ## What a judge can run
 

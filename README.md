@@ -73,32 +73,37 @@ That is the product.
 | CouncilSubscriber | `0x2F6C91d8046F2f398894C070eB4d5b0934493826` |
 | ConvoyEmitter (Sepolia) | `0x493eC14D06ce94C6F230A5dB7b3f3981949daB6C` |
 
-Six convoys delivered so far, carrying 48 real Sepolia transactions to three unrelated dApps.
+Three convoys delivered so far, carrying 26 real Sepolia transactions to three unrelated dApps.
 
 ```
-convoys delivered     6
-transactions proven   48
-continuity hashes     190
-facts handed to apps  36
+convoys delivered     3
+transactions proven   26
+continuity hashes     50
+facts handed to apps  25
 
 per convoy:
-  9 transactions   15 hashes shared    (135 if delivered alone,   9.0x)
-  1 transaction     4 hashes shared      (4 if delivered alone,   1.0x)
- 10 transactions   30 hashes shared    (300 if delivered alone,  10.0x)
-  8 transactions   17 hashes shared    (136 if delivered alone,   8.0x)
- 10 transactions  108 hashes shared   (1080 if delivered alone,  10.0x)
- 10 transactions   16 hashes shared    (160 if delivered alone,  10.0x)
+ 10 transactions   20 hashes shared    (200 if delivered alone,  10.0x)
+  6 transactions   13 hashes shared     (78 if delivered alone,   6.0x)
+ 10 transactions   17 hashes shared    (170 if delivered alone,  10.0x)
 
-modelled cost  alone 0.00163035 CTC  vs convoy 0.00019310 CTC  (8.4x)
+modelled cost  alone 0.00072792 CTC  vs convoy 0.00008350 CTC  (8.7x)
 ```
 
-The fifth line is the interesting one. Those transactions sat unclaimed long enough for their
-attestations to start compacting, and the continuity proof went from about 16 hashes to 108. That is
-the cost curve `relayer/batcher.ts` is built around, showing up on a live network.
+The middle line is a convoy that shipped on its deadline rather than full, which is what happens
+when the pool is thin. It still paid for one continuity proof instead of six. The other two filled
+to the cap and took the whole discount, and the last of them,
+[`0x5e32d031…055d`](https://creditcoin-testnet.blockscout.com/tx/0x5e32d031550acf9f737b982ba1554d3614b2350c8bab17a3fa22548a7cdd055d),
+is the relayer doing this unattended: it filled a batch of ten from three unrelated routes, waited
+about seven minutes for the attestor network to cover the last source block, and shipped.
 
-The most recent convoy is the whole argument in one transaction
-([`0x901e3e42…2658a`](https://creditcoin-testnet.blockscout.com/tx/0x901e3e4286a9f7d58799977b151335549d5e88dc1c27e8b8b2db1efa0ed2658a)):
-ten Sepolia transactions verified under one continuity proof of 16 hashes, nine facts handed to
+An earlier deployment of the same contracts produced the other end of the curve. One convoy sat
+unclaimed long enough for its attestations to start compacting into checkpoints, and its continuity
+proof went from about 16 hashes to 108. That is the cost curve `relayer/batcher.ts` is built around,
+showing up on a live network.
+
+The convoy that makes the whole argument in one transaction is
+[`0xec3f6378…b822`](https://creditcoin-testnet.blockscout.com/tx/0xec3f63786e0e4549e51a971fd30072e4a2f820a7c6d6a18303bcd1888c4eb822):
+ten Sepolia transactions verified under one continuity proof of 20 hashes, nine facts handed to
 three dApps that share nothing, and one transaction refused because it had reverted at the source.
 The precompile verified that tenth proof happily, because the transaction really is in that block.
 Only Convoy's own receipt check stopped it becoming a fact.
