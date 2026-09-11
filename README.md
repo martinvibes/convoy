@@ -43,6 +43,7 @@ relayer/
 ui/                           the dispatch board: Vite, React, Tailwind, no backend
 bench/bench.ts                the claim, measured on CC3 testnet
 docs/ATTESTCOIN.md            how the protocol is used, and what is deliberately not used
+docs/SUBMISSION.md            the hackathon write-up: problem, proof, and what a judge can run
 ```
 
 ## The three subscribers
