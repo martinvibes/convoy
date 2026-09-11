@@ -11,7 +11,7 @@ import {
   SKIP_REASON,
 } from '../chain';
 import type { Convoy, Fact, Skip } from '../useConvoy';
-import { useConvoyDetail } from '../useConvoy';
+import { useConvoyDetail, useNow } from '../useConvoy';
 import { Empty, Code, HashLink, Copy } from './Chrome';
 
 type Item = {
@@ -159,6 +159,9 @@ function CargoRow({ item, index }: { item: Item; index: number }) {
 
 function Footer({ convoy }: { convoy: Convoy }) {
   const detail = useConvoyDetail(convoy.txHash);
+  // ago() reads the clock at render time, so without a tick "2m ago" would sit there saying 2m an
+  // hour later.
+  useNow(10_000);
   const alone = costCtc(convoy.hashes * convoy.queries, convoy.queries);
   const shared = costCtc(convoy.hashes, 1);
 
