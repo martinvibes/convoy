@@ -117,11 +117,20 @@ npm run ui                       # the dispatch board, reads the chain from your
 
 ### The dashboard
 
-`npm run ui` serves a live board at `http://localhost:5178`. It reads Creditcoin directly from the
-browser, with no backend and no indexer: the Creditcoin RPC sends `access-control-allow-origin: *`,
-and the contract addresses come from the same `deployments.json` the deploy script writes. The hero
-is the manifest of the last convoy, the shared escort on the left and the cargo it covered on the
-right, followed by what those transactions would have cost travelling alone.
+`npm run ui` serves a live board at `http://localhost:5178`. Vite, React and Tailwind, with no
+backend and no indexer. Both the Creditcoin and Sepolia public RPCs send
+`access-control-allow-origin: *`, so the browser reads them directly, and the contract addresses
+come from the same `deployments.json` the deploy script writes.
+
+The hero is the manifest of one convoy: the shared escort on the left, the cargo it covered on the
+right, one coloured block per subscribing dApp and red for anything refused. Under it, two bars for
+what those same transactions would have cost travelling alone.
+
+Nothing on it is unverifiable. Every cargo row resolves its source block height and transaction
+index against Sepolia and links the real Ethereum transaction. Every convoy and refusal links to the
+Creditcoin transaction that delivered it. The dispatch log is selectable, so any earlier convoy can
+be pulled up into the manifest. The refresh is visible rather than silent: a countdown to the next
+read, a button to force one, and a failed read that says so while keeping the data it already had.
 
 `npm run check` talks to the real ChainInfo precompile and prints what is currently attested:
 
