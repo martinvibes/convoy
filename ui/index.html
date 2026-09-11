@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Convoy — dispatch board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Narrow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* Loading dock at night: oxidised steel, tarpaulin, stencil paint. */
+    --ground:#16202B;
+    --deck:#1D2B39;
+    --crate:#243545;
+    --edge:#33495E;
+    --ink:#E9F0F6;
+    --ink-soft:#9DB3C6;
+    --ink-faint:#65809A;
+    /* The only warm thing on this page is the escort. It is the expensive item being shared. */
+    --escort:#F2A413;
+    --escort-dim:#8A6216;
+    --cargo-a:#6FB3A0;
+    --cargo-b:#8E9ED6;
+    --cargo-c:#C98BA8;
+    --stop:#D4685C;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--ground);color:var(--ink);
+    font-family:Archivo,system-ui,-apple-system,Segoe UI,sans-serif;
+    font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  body{padding:0 0 5rem}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 1.5rem}
+  a{color:inherit}
+
+  /* --- dock header --- */
+  header{border-bottom:1px solid var(--edge);margin-bottom:2.5rem}
+  .bar{display:flex;align-items:baseline;gap:1.25rem;flex-wrap:wrap;
+    padding:1.5rem 0 1.25rem}
+  .mark{font-family:'Archivo Narrow',Archivo,sans-serif;font-weight:700;
+    font-size:1.75rem;letter-spacing:.06em;margin:0}
+  .tagline{color:var(--ink-soft);font-size:.95rem;max-width:46ch}
+  .status{margin-left:auto;display:flex;align-items:center;gap:.5rem;
+    color:var(--ink-soft);font-size:.9rem;font-variant-numeric:tabular-nums}
+  .pulse{width:.5rem;height:.5rem;border-radius:50%;background:var(--cargo-a);
+    box-shadow:0 0 0 0 rgba(111,179,160,.6);animation:pulse 2.4s ease-out infinite}
+  @keyframes pulse{70%{box-shadow:0 0 0 .6rem rgba(111,179,160,0)}100%{box-shadow:0 0 0 0 rgba(111,179,160,0)}}
+  @media (prefers-reduced-motion:reduce){.pulse{animation:none}}
+
+  h2{font-family:'Archivo Narrow',Archivo,sans-serif;font-weight:600;
+    font-size:1.15rem;letter-spacing:.04em;margin:0 0 1rem}
+
+  /* --- the manifest: the hero --- */
+  .manifest{background:var(--deck);border:1px solid var(--edge);
+    border-left:3px solid var(--escort);padding:1.5rem 1.75rem 1.25rem;margin-bottom:.75rem}
+  .escort-line{display:flex;align-items:baseline;gap:.75rem;flex-wrap:wrap;
+    padding-bottom:1rem;margin-bottom:1rem;border-bottom:1px solid var(--edge)}
+  .escort-label{color:var(--escort);font-weight:600;font-size:1.05rem}
+  .escort-detail{color:var(--ink-soft);font-size:.95rem;font-variant-numeric:tabular-nums}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+  td{padding:.55rem 0;border-bottom:1px solid rgba(51,73,94,.5);vertical-align:baseline}
+  tr:last-child td{border-bottom:none}
+  .slot{color:var(--ink-faint);width:2.5rem;font-weight:600}
+  .hash{font-family:'Archivo Narrow',Archivo,sans-serif;letter-spacing:.02em}
+  .blk{color:var(--ink-soft);text-align:right;width:9rem}
+  .dest{width:14rem;font-weight:500}
+  .dot{display:inline-block;width:.45rem;height:.45rem;border-radius:50%;margin-right:.5rem;
+    vertical-align:middle}
+  .counterfactual{color:var(--ink-soft);font-size:.95rem;margin:0 0 2.5rem;padding-left:.25rem}
+  .counterfactual b{color:var(--ink);font-weight:600}
+
+  /* --- running totals --- */
+  .totals{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+    gap:1px;background:var(--edge);border:1px solid var(--edge);margin-bottom:2.5rem}
+  .cell{background:var(--deck);padding:1.1rem 1.25rem}
+  .cell .n{font-family:'Archivo Narrow',Archivo,sans-serif;font-size:1.9rem;font-weight:700;
+    font-variant-numeric:tabular-nums;line-height:1.1}
+  .cell .k{color:var(--ink-soft);font-size:.9rem;margin-top:.25rem}
+  .cell.saved .n{color:var(--escort)}
+
+  /* --- log + routes --- */
+  .split{display:grid;grid-template-columns:1.35fr 1fr;gap:2.5rem;align-items:start}
+  @media (max-width:860px){.split{grid-template-columns:1fr;gap:2rem}}
+  .log{border:1px solid var(--edge)}
+  .log .row{display:grid;grid-template-columns:1fr auto;gap:1rem;
+    padding:.8rem 1.1rem;border-bottom:1px solid var(--edge);align-items:baseline}
+  .log .row:last-child{border-bottom:none}
+  .log .row .what{font-size:.95rem}
+  .log .row .when{color:var(--ink-faint);font-size:.85rem;font-variant-numeric:tabular-nums;
+    text-align:right;white-space:nowrap}
+  .ratio{color:var(--escort);font-weight:600;font-variant-numeric:tabular-nums}
+  .route{border:1px solid var(--edge);padding:.9rem 1.1rem;margin-bottom:.5rem;background:var(--deck)}
+  .route .name{font-weight:600;margin-bottom:.15rem}
+  .route .meta{color:var(--ink-soft);font-size:.88rem;font-variant-numeric:tabular-nums}
+  .route .addr{color:var(--ink-faint);font-size:.82rem;
+    font-family:'Archivo Narrow',Archivo,sans-serif;letter-spacing:.02em;
+    overflow-wrap:anywhere;margin-top:.3rem}
+
+  .empty{border:1px dashed var(--edge);padding:2rem 1.75rem;color:var(--ink-soft);
+    max-width:62ch}
+  .empty h3{margin:0 0 .5rem;font-family:'Archivo Narrow',Archivo,sans-serif;
+    font-size:1.1rem;font-weight:600;color:var(--ink)}
+  .empty code{background:var(--crate);padding:.15rem .45rem;color:var(--ink);
+    font-family:'Archivo Narrow',Archivo,sans-serif}
+  .skipped{color:var(--stop)}
+  :focus-visible{outline:2px solid var(--escort);outline-offset:2px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap bar">
+    <h1 class="mark">CONVOY</h1>
+    <p class="tagline">Ten shipments, one escort. Proof delivery for Creditcoin, shared across apps that have nothing to do with each other.</p>
+    <div class="status"><span class="pulse" aria-hidden="true"></span><span id="status">connecting</span></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="hero">
+    <h2>Latest manifest</h2>
+    <div id="manifest-slot"></div>
+  </section>
+
+  <section>
+    <h2>Since deployment</h2>
+    <div class="totals" id="totals"></div>
+  </section>
+
+  <div class="split">
+    <section>
+      <h2>Dispatch log</h2>
+      <div class="log" id="log"></div>
+    </section>
+    <section>
+      <h2>Who is subscribed</h2>
+      <div id="routes"></div>
+    </section>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.15.0/ethers.umd.min.js"></script>
+<script src="/config.js"></script>
+<script>
+const C = window.CONVOY;
+
+const ROUTER_ABI = [
+  "event ConvoyDelivered(address indexed relayer, uint64 indexed chainKey, uint256 queries, uint256 facts, uint256 continuityHashes)",
+  "event FactDelivered(bytes32 indexed factId, bytes32 indexed subId, address indexed callback, bool accepted)",
+  "event QuerySkipped(bytes32 indexed queryId, uint8 reason)",
+  "function totalBatches() view returns (uint256)",
+  "function totalQueriesVerified() view returns (uint256)",
+  "function totalContinuityHashes() view returns (uint256)",
+  "function totalFactsDelivered() view returns (uint256)"
+];
+const REGISTRY_ABI = [
+  "event Subscribed(bytes32 indexed subId, bytes32 indexed routeKey, address indexed owner, address callback, uint96 feePerDelivery)",
+  "function get(bytes32 subId) view returns (tuple(address owner,address callback,uint64 chainKey,address emitter,bytes32 topic0,uint96 feePerDelivery,uint96 balance,uint32 callbackGasLimit,bool active))"
+];
+
+const SKIP_REASON = {1:"already delivered", 2:"source transaction failed", 3:"unsupported transaction type"};
+const CARGO = ["cargo-a","cargo-b","cargo-c"];
+
+const el = (id) => document.getElementById(id);
+const short = (h) => h.slice(0,8) + "…" + h.slice(-4);
+const num = (n) => Number(n).toLocaleString("en-US");
+
+function nameFor(addr){
+  if(!addr) return "unknown";
+  const a = addr.toLowerCase();
+  if(C.passport && a === C.passport.toLowerCase()) return "credit passport";
+  if(C.escrow   && a === C.escrow.toLowerCase())   return "delivery escrow";
+  if(C.council  && a === C.council.toLowerCase())  return "agent council";
+  return short(addr);
+}
+function cargoClass(addr){
+  const known = [C.passport, C.escrow, C.council].filter(Boolean).map(x=>x.toLowerCase());
+  const i = known.indexOf((addr||"").toLowerCase());
+  return CARGO[i] ?? "cargo-a";
+}
+
+function waiting(msg, hint){
+  return `<div class="empty"><h3>${msg}</h3><p>${hint}</p></div>`;
+}
+
+function renderManifest(convoy, facts){
+  if(!convoy){
+    el("manifest-slot").innerHTML = waiting(
+      "No convoy has arrived yet",
+      "Emit some source-chain traffic with <code>npm run emit -- 9</code>, then start the relayer with <code>npm run relayer</code>. The first manifest lands about six minutes later, once the attestor network has covered those Sepolia blocks."
+    );
+    return;
+  }
+  const hashes = Number(convoy.args.continuityHashes);
+  const queries = Number(convoy.args.queries);
+  const mine = facts.filter(f => f.blockNumber === convoy.blockNumber);
+
+  const rows = mine.length ? mine.map((f,i) => `
+    <tr>
+      <td class="slot">${i+1}</td>
+      <td class="hash">${short(f.args.factId)}</td>
+      <td class="dest"><span class="dot" style="background:var(--${cargoClass(f.args.callback)})"></span>${nameFor(f.args.callback)}</td>
+      <td class="blk">${f.args.accepted ? "delivered" : '<span class="skipped">refused</span>'}</td>
+    </tr>`).join("")
+    : `<tr><td colspan="4" style="color:var(--ink-soft)">Verified, but nothing on these routes was subscribed.</td></tr>`;
+
+  el("manifest-slot").innerHTML = `
+    <div class="manifest">
+      <div class="escort-line">
+        <span class="escort-label">One escort</span>
+        <span class="escort-detail">a single continuity proof, ${num(hashes)} hashes, covering all ${queries} transaction${queries===1?"":"s"}</span>
+      </div>
+      <table><tbody>${rows}</tbody></table>
+    </div>
+    <p class="counterfactual">Travelling separately, these ${queries} transaction${queries===1?"":"s"} would have needed
+      <b>${queries} escorts</b> and <b>${num(hashes*queries)} hashes</b>. Sharing one cost <b>${num(hashes)}</b>.</p>`;
+}
+
+function renderTotals(totals, convoys){
+  const alone = convoys.reduce((s,c)=> s + Number(c.args.queries)*Number(c.args.continuityHashes), 0);
+  const actual = convoys.reduce((s,c)=> s + Number(c.args.continuityHashes), 0);
+  const saved = alone - actual;
+  const ctc = (h) => (2.3e-5 * (h>0?1:0) + 2.9e-7 * h);
+  el("totals").innerHTML = `
+    <div class="cell"><div class="n">${num(totals.batches)}</div><div class="k">convoys arrived</div></div>
+    <div class="cell"><div class="n">${num(totals.queries)}</div><div class="k">transactions proven</div></div>
+    <div class="cell"><div class="n">${num(totals.facts)}</div><div class="k">facts handed to apps</div></div>
+    <div class="cell saved"><div class="n">${num(saved)}</div><div class="k">continuity hashes not paid for</div></div>
+    <div class="cell saved"><div class="n">${ctc(saved).toFixed(5)}</div><div class="k">CTC saved, modelled</div></div>`;
+}
+
+function renderLog(convoys, skips){
+  const items = [
+    ...convoys.map(c => ({
+      block: c.blockNumber,
+      html: `<span class="what">Convoy of ${c.args.queries} arrived, ${c.args.facts} fact${Number(c.args.facts)===1?"":"s"} delivered
+             &middot; <span class="ratio">${Number(c.args.queries)}&times;</span> on one escort</span>`
+    })),
+    ...skips.map(s => ({
+      block: s.blockNumber,
+      html: `<span class="what skipped">Skipped one transaction: ${SKIP_REASON[Number(s.args.reason)] ?? "unknown"}</span>`
+    }))
+  ].sort((a,b)=> b.block - a.block).slice(0,14);
+
+  el("log").innerHTML = items.length
+    ? items.map(i => `<div class="row">${i.html}<span class="when">block ${num(i.block)}</span></div>`).join("")
+    : `<div class="row"><span class="what" style="color:var(--ink-soft)">Nothing has arrived yet.</span><span class="when"></span></div>`;
+}
+
+function renderRoutes(routes){
+  el("routes").innerHTML = routes.length ? routes.map(r => `
+    <div class="route">
+      <div class="name"><span class="dot" style="background:var(--${cargoClass(r.callback)})"></span>${nameFor(r.callback)}</div>
+      <div class="meta">${r.active ? "listening" : "paused"} &middot; ${ethers.formatEther(r.balance)} CTC left &middot; ${ethers.formatEther(r.fee)} per delivery</div>
+      <div class="addr">watching ${r.emitter} on Sepolia</div>
+    </div>`).join("")
+    : waiting("Nobody has subscribed yet", "Run <code>npm run deploy:creditcoin</code> to put the three demo apps on the route table.");
+}
+
+async function tick(provider, router, registry){
+  const [batches, queries, hashes, facts] = await Promise.all([
+    router.totalBatches(), router.totalQueriesVerified(),
+    router.totalContinuityHashes(), router.totalFactsDelivered()
+  ]);
+  const head = await provider.getBlockNumber();
+
+  const [convoys, factEvents, skips, subs] = await Promise.all([
+    router.queryFilter(router.filters.ConvoyDelivered(), 0, "latest"),
+    router.queryFilter(router.filters.FactDelivered(), 0, "latest"),
+    router.queryFilter(router.filters.QuerySkipped(), 0, "latest"),
+    registry.queryFilter(registry.filters.Subscribed(), 0, "latest")
+  ]);
+
+  const routes = await Promise.all(subs.map(async (s) => {
+    const r = await registry.get(s.args.subId);
+    return { callback:r.callback, emitter:r.emitter, active:r.active, balance:r.balance, fee:r.feePerDelivery };
+  }));
+
+  renderManifest(convoys[convoys.length-1], factEvents);
+  renderTotals({ batches, queries, hashes, facts }, convoys);
+  renderLog(convoys, skips);
+  renderRoutes(routes);
+
+  el("status").textContent = `live · Creditcoin block ${num(head)}`;
+}
+
+async function main(){
+  if(!C.router){
+    el("status").textContent = "not deployed";
+    el("manifest-slot").innerHTML = waiting(
+      "Convoy is not on chain yet",
+      "Run <code>npm run deploy:creditcoin</code>. This board reads Creditcoin straight from your browser, so it will fill in on its own once the router exists."
+    );
+    el("totals").innerHTML = "";
+    renderRoutes([]);
+    renderLog([], []);
+    return;
+  }
+  const provider = new ethers.JsonRpcProvider(C.rpc);
+  const router = new ethers.Contract(C.router, ROUTER_ABI, provider);
+  const registry = new ethers.Contract(C.registry, REGISTRY_ABI, provider);
+
+  const run = async () => {
+    try { await tick(provider, router, registry); }
+    catch(e){ el("status").textContent = "reconnecting"; console.error(e); }
+  };
+  await run();
+  setInterval(run, 10000);
+}
+main();
+</script>
+</body>
+</html>

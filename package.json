@@ -16,7 +16,9 @@
     "typecheck": "tsc --noEmit",
     "test:contracts": "forge test -vv",
     "test:relayer": "tsx --test relayer/batcher.test.ts",
-    "check": "tsx scripts/check-setup.ts"
+    "check": "tsx scripts/check-setup.ts",
+    "ui": "node ui/serve.mjs",
+    "fund:relayer": "tsx scripts/fund-relayer.ts"
   },
   "dependencies": {
     "@gluwa/asc-contracts": "0.2.1",
