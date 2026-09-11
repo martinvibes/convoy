@@ -134,6 +134,37 @@ depends on an unreleased feature.
 **Mainnet.** Everything is deployed against CC3 testnet with Ethereum Sepolia as the source chain
 (`chainKey` 1, which is not the EVM chain id 11155111).
 
+## What running this against the live testnet actually taught us
+
+These are not style preferences. Each one broke a working integration, and any team building on
+Attestcoin will hit all four.
+
+**The proof proves inclusion, not success, and the SDK will happily build one for a failure.**
+Covered in full above, but worth restating here because it is the only one that is a correctness
+bug rather than an availability bug. Transaction
+[`0xc269667d…f90f`](https://sepolia.etherscan.io/tx/0xc269667ddc1ebbe6781a4bc803e250e514aa83b47cf210511b21c1cef057f90f)
+reverted on Sepolia. `ProofBuilder.getBatchProof` built a valid proof for it, the precompile
+verified that proof, and only Convoy's own `receiptStatus` check stopped it from becoming a fact.
+An ASC that trusts verification alone accepts a repayment that never happened.
+
+**`waitUntilHeightAttested` cannot be used with its defaults.** It takes a `waitTimeoutMs` that
+defaults to 60 seconds. The measured lag between a Sepolia block and its attestation on CC3 testnet
+is about 6.4 minutes, so the default always throws. It also retries the underlying precompile call
+only five times before giving up, so one slow RPC response aborts a wait that was progressing
+normally. `relayer/attestation.ts` replaces it with a loop that treats an unreachable node and an
+unattested height as different things, and only the deadline ends.
+
+**`eth_getLogs` must be bounded on the public RPC.** An unbounded range returns
+`query timeout of 10 seconds exceeded`, so every scan in this repo starts at the block Convoy was
+deployed at. The deploy script records it; `scripts/find-deploy-block.ts` recovers it by binary
+search on `eth_getCode` for a deployment that predates that.
+
+**A reverted source transaction is invisible to log scanning.** Logs from a reverted transaction are
+discarded, so `eth_getLogs` never returns them, and no log-driven relayer can pick one up. This is
+mostly good news, since it means the common path never sees failures. It does mean the receipt gate
+has to be tested by delivering a known failure by hash, which is what `scripts/prove-failure.ts`
+does.
+
 ## Addresses and environments
 
 | thing | value |
@@ -144,4 +175,5 @@ depends on an unreleased feature.
 | ChainInfo precompile | `0x0000000000000000000000000000000000000fd3` |
 | Source chain | Ethereum Sepolia, `chainKey` 1 |
 
-Deployed Convoy addresses are written to `deployments.json` by the deploy scripts.
+Deployed Convoy addresses are written to `deployments.json` by the deploy scripts. The live
+deployment is listed in the README, and `npm run status` reads the current state back off chain.
