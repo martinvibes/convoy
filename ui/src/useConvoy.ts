@@ -182,3 +182,40 @@ export function useNow(intervalMs = 1000): number {
   }, [intervalMs]);
   return now;
 }
+
+export type ConvoyDetail = { gasUsed: bigint; timestamp: number } | null;
+
+/**
+ * The receipt and block for one convoy, fetched only for the convoy on screen.
+ *
+ * Gas and timing are not in the event, and pulling a receipt for every convoy in the log would be
+ * dozens of extra calls to a public RPC for numbers nobody is looking at.
+ */
+export function useConvoyDetail(txHash?: string): ConvoyDetail {
+  const [detail, setDetail] = useState<ConvoyDetail>(null);
+
+  useEffect(() => {
+    if (!txHash) {
+      setDetail(null);
+      return;
+    }
+    let live = true;
+    setDetail(null);
+    void (async () => {
+      try {
+        const receipt = await provider.getTransactionReceipt(txHash);
+        if (!receipt) return;
+        const block = await provider.getBlock(receipt.blockNumber);
+        if (live && block) setDetail({ gasUsed: receipt.gasUsed, timestamp: block.timestamp * 1000 });
+      } catch {
+        // Gas and timing are decoration. A board that blanks because one extra call failed is worse
+        // than a board missing two numbers.
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [txHash]);
+
+  return detail;
+}

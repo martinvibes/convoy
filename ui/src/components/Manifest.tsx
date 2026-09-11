@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import {
+  ago,
   appFor,
   commas,
+  costCtc,
   shortHash,
   sourceTxHash,
   sourceTxUrl,
@@ -9,6 +11,7 @@ import {
   SKIP_REASON,
 } from '../chain';
 import type { Convoy, Fact, Skip } from '../useConvoy';
+import { useConvoyDetail } from '../useConvoy';
 import { Empty, Code, HashLink, Copy } from './Chrome';
 
 type Item = {
@@ -114,18 +117,7 @@ export function Manifest({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t-[3px] border-ink bg-paper px-4 py-2.5 text-xs sm:px-5">
-        <span className="font-bold">
-          relayed by{' '}
-          <HashLink href={`${txUrl(convoy.txHash)}`} title={convoy.relayer}>
-            {convoy.relayer.slice(0, 8)}…{convoy.relayer.slice(-4)}
-          </HashLink>
-        </span>
-        <Copy value={convoy.relayer} label="relayer address" />
-        <span className="ml-auto font-mono tabular-nums">
-          Creditcoin block {commas(convoy.block)}
-        </span>
-      </div>
+      <Footer convoy={convoy} />
     </div>
   );
 }
@@ -161,5 +153,33 @@ function CargoRow({ item, index }: { item: Item; index: number }) {
       </span>
       <span className="shrink-0 text-xs font-bold uppercase tracking-[0.1em]">{item.state}</span>
     </li>
+  );
+}
+
+
+function Footer({ convoy }: { convoy: Convoy }) {
+  const detail = useConvoyDetail(convoy.txHash);
+  const alone = costCtc(convoy.hashes * convoy.queries, convoy.queries);
+  const shared = costCtc(convoy.hashes, 1);
+
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t-[3px] border-ink bg-paper px-4 py-2.5 text-xs sm:px-5">
+      <span className="font-bold">
+        relayed by{' '}
+        <HashLink href={txUrl(convoy.txHash)} title={convoy.relayer}>
+          {convoy.relayer.slice(0, 8)}…{convoy.relayer.slice(-4)}
+        </HashLink>
+      </span>
+      <Copy value={convoy.relayer} label="relayer address" />
+
+      <span className="font-mono tabular-nums opacity-70">
+        Creditcoin block {commas(convoy.block)}
+        {detail && ` · ${commas(detail.gasUsed)} gas · ${ago(detail.timestamp)}`}
+      </span>
+
+      <span className="ml-auto border-2 border-ink bg-escort px-2 py-1 font-bold tabular-nums">
+        this convoy: {(alone / shared).toFixed(1)}× cheaper than proving these apart
+      </span>
+    </div>
   );
 }

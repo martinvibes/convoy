@@ -129,8 +129,11 @@ function Header({
   const now = useNow();
   const live = state.status === 'ready';
   const stale = state.status === 'ready' && state.stale;
-  const secondsLeft = Math.max(0, Math.ceil((nextRefreshAt - now) / 1000));
-  const progress = live ? Math.min(100, ((REFRESH_MS / 1000 - secondsLeft) / (REFRESH_MS / 1000)) * 100) : 0;
+  const period = REFRESH_MS / 1000;
+  // Clamped at both ends. A negative width is not a valid CSS length, so the browser drops the rule
+  // and the bar renders full instead of empty.
+  const secondsLeft = Math.min(period, Math.max(0, Math.ceil((nextRefreshAt - now) / 1000)));
+  const progress = live ? Math.min(100, Math.max(0, ((period - secondsLeft) / period) * 100)) : 0;
 
   return (
     <header className="mb-8 flex flex-wrap items-center gap-x-6 gap-y-3">
