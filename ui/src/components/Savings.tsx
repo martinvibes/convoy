@@ -12,7 +12,12 @@ export function Savings({ convoys }: { convoys: Convoy[] }) {
   const shared = convoys.reduce((s, c) => s + c.hashes, 0);
   const aloneProofs = convoys.reduce((s, c) => s + c.queries, 0);
   const saved = alone - shared;
-  const savedCtc = costCtc(alone, aloneProofs) - costCtc(shared, convoys.length);
+  const costAlone = costCtc(alone, aloneProofs);
+  const costShared = costCtc(shared, convoys.length);
+  const savedCtc = costAlone - costShared;
+  // The badge says "cheaper", so it has to be the cost ratio and not the hash ratio. They differ:
+  // every verification also pays a flat call cost that sharing does not remove.
+  const cheaper = costShared > 0 ? costAlone / costShared : 0;
   const pct = alone > 0 ? Math.max((shared / alone) * 100, 1.5) : 0;
 
   return (
@@ -36,7 +41,7 @@ export function Savings({ convoys }: { convoys: Convoy[] }) {
         <span className="text-sm font-bold">CTC</span>
         {alone > 0 && (
           <span className="ml-auto border-[3px] border-ink bg-escort px-3 py-1 font-display text-2xl leading-none tabular-nums">
-            {(alone / shared).toFixed(1)}× cheaper
+            {cheaper.toFixed(1)}× cheaper
           </span>
         )}
       </div>
